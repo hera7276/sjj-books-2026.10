@@ -1,0 +1,3283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>SJJ BOOKS - 프리미엄 독서록 & 책 월드컵</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- HTML5 QR / Barcode Scanner -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    body { font-family: 'Pretendard', sans-serif; }
+
+    /* Custom smooth scroll & drawer animations */
+    .drawer-transition {
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+    }
+
+    /* World cup selection animation */
+    .worldcup-card {
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, border-color 0.2s ease;
+    }
+    .worldcup-card:hover {
+      transform: translateY(-6px) scale(1.02);
+    }
+    .worldcup-card:active {
+      transform: scale(0.98);
+    }
+
+    /* Book Tree Apple/Book Fruit floating animation */
+    @keyframes sway {
+      0%, 100% { transform: rotate(-3deg); }
+      50% { transform: rotate(3deg); }
+    }
+    .tree-fruit {
+      animation: sway 3s ease-in-out infinite;
+      transform-origin: top center;
+    }
+    .tree-fruit:hover {
+      transform: scale(1.15) !important;
+      z-index: 20;
+    }
+
+    /* Top Slide Toast / Snackbar Animation */
+    #toastContainer {
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    }
+    .toast-hidden {
+      transform: translate(-50%, -130%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .toast-visible {
+      transform: translate(-50%, 0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body class="bg-indigo-50/40 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white relative">
+
+  <!-- Top Slide-down Toast / Snackbar Container -->
+  <div id="toastContainer" class="fixed top-5 left-1/2 z-50 toast-hidden flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md border font-bold text-xs sm:text-sm min-w-[280px] sm:min-w-[340px] max-w-[90vw] justify-between">
+    <div class="flex items-center gap-2.5 truncate">
+      <span id="toastIcon" class="text-xl flex-shrink-0">✨</span>
+      <span id="toastMessage" class="truncate font-black">알림 메시지</span>
+    </div>
+    <button onclick="hideToast()" class="p-1 opacity-70 hover:opacity-100 transition-opacity">
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+  </div>
+
+  <!-- Auth Gateway Screen (입장 전 로그인/회원가입 모달) -->
+  <div id="authGate" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-7 shadow-2xl border border-indigo-100 relative overflow-hidden">
+      <div class="text-center mb-6">
+        <div class="inline-flex p-3 bg-indigo-600 text-white rounded-2xl shadow-md shadow-indigo-600/30 mb-3">
+          <i data-lucide="book-open" class="w-8 h-8"></i>
+        </div>
+        <h2 class="text-2xl font-black text-indigo-950">SJJ BOOKS</h2>
+        <p class="text-xs text-slate-500 mt-1">나만의 독서 라이브러리에 오신 것을 환영합니다!</p>
+      </div>
+
+      <!-- Auth Tab Toggle -->
+      <div class="flex bg-slate-100 p-1 rounded-2xl mb-5 text-xs font-bold text-slate-600">
+        <button id="authTabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2.5 rounded-xl bg-white shadow-xs text-indigo-950 font-black">로그인</button>
+        <button id="authTabSignup" onclick="switchAuthTab('signup')" class="flex-1 py-2.5 rounded-xl text-slate-500">회원가입</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">아이디</label>
+          <input type="text" id="loginUsername" required placeholder="아이디를 입력하세요" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">비밀번호</label>
+          <input type="password" id="loginPassword" required placeholder="비밀번호를 입력하세요" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20">
+        </div>
+        <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-sm transition-all shadow-md shadow-indigo-600/20">
+          로그인하고 입장하기
+        </button>
+      </form>
+
+      <!-- Signup Form -->
+      <form id="signupForm" onsubmit="handleSignup(event)" class="space-y-3.5 hidden">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">아이디 *</label>
+          <input type="text" id="signupUsername" required placeholder="영문 또는 숫자 아이디" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">독서가 닉네임 *</label>
+          <input type="text" id="signupNickname" required placeholder="예: 지혜의 독서가" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">비밀번호 *</label>
+          <input type="password" id="signupPassword" required placeholder="비밀번호를 입력하세요" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">프로필 사진 (선택)</label>
+          <div class="flex items-center gap-3">
+            <div id="signupAvatarPreview" class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg flex-shrink-0 overflow-hidden border border-indigo-200">
+              👤
+            </div>
+            <input type="file" id="signupAvatarFile" accept="image/*" onchange="previewSignupAvatar(event)" class="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+          </div>
+        </div>
+        <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-sm transition-all shadow-md shadow-emerald-600/20">
+          회원가입 완료
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sidebar Drawer Backdrop -->
+  <div id="drawerBackdrop" onclick="closeSidebar()" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300"></div>
+
+  <!-- Sidebar Drawer Navigation (Smooth Left Slide) -->
+  <aside id="sidebarDrawer" class="fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-white z-50 shadow-2xl border-r border-indigo-100 flex flex-col -translate-x-full drawer-transition">
+    <!-- Drawer Header with User Profile Badge -->
+    <div class="p-5 border-b border-indigo-50 flex items-center justify-between bg-gradient-to-r from-indigo-50/70 to-purple-50/40">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="openProfileModal()">
+        <div id="drawerUserAvatar" class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black text-base shadow-md shadow-indigo-600/20 overflow-hidden border-2 border-white">
+          👤
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5">
+            <h2 id="drawerUserNickname" class="text-sm font-black text-indigo-950 truncate">독서가</h2>
+            <span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-bold">MY</span>
+          </div>
+          <p id="drawerUserHandle" class="text-[11px] font-semibold text-indigo-500 truncate">@user</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1">
+        <button onclick="handleLogout()" title="로그아웃" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+        </button>
+        <button onclick="closeSidebar()" class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Drawer Level Info Card (1000P Continent System) -->
+    <div class="p-5 border-b border-indigo-50">
+      <div class="bg-gradient-to-br from-amber-50 to-orange-50/80 p-4 rounded-2xl border border-amber-200/80 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-bold text-amber-800 uppercase tracking-wider">현재 탐험 지역</span>
+          <span id="drawerPointsBadge" class="text-xs font-black text-amber-700 bg-white px-2.5 py-0.5 rounded-full border border-amber-200 shadow-2xs">0 P</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="drawerLevelIcon" class="text-3xl">🌍</span>
+          <div>
+            <h4 id="drawerLevelName" class="font-black text-amber-950 text-base leading-tight">아프리카 대륙</h4>
+            <p id="drawerNextLevelDesc" class="text-[11px] font-medium text-amber-800/80 mt-0.5">다음 대륙까지 1,000 P</p>
+          </div>
+        </div>
+        <div class="mt-3 bg-amber-200/60 rounded-full h-2 overflow-hidden">
+          <div id="drawerLevelProgress" class="bg-amber-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drawer Menu List -->
+    <nav class="flex-1 overflow-y-auto p-4 space-y-1.5 text-sm font-bold">
+      <button onclick="navSelect('dashboard')" id="side-nav-dashboard" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all bg-indigo-600 text-white shadow-md shadow-indigo-600/20">
+        <span class="text-lg">📚</span>
+        <span>내 서재</span>
+      </button>
+
+      <!-- Existing Feature: MY Reading Tree -->
+      <button onclick="navSelect('tree')" id="side-nav-tree" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">
+        <span class="text-lg">🌳</span>
+        <span class="flex-1 text-left">MY 독서 나무</span>
+        <span id="navTreeCountBadge" class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">0열매</span>
+      </button>
+
+      <!-- Existing Feature: Book World Cup (32강) -->
+      <button onclick="navSelect('worldcup')" id="side-nav-worldcup" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-slate-700 hover:bg-amber-50 hover:text-amber-700">
+        <span class="text-lg">🏆</span>
+        <span class="flex-1 text-left">책 이상형 월드컵 (32선)</span>
+        <span class="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full">HOT</span>
+      </button>
+
+      <!-- Existing Feature: Book Community Review Board -->
+      <button onclick="navSelect('reviews')" id="side-nav-reviews" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-slate-700 hover:bg-purple-50 hover:text-purple-700">
+        <span class="text-lg">💬</span>
+        <span class="flex-1 text-left">책 후기 남기기</span>
+        <span id="navReviewCountBadge" class="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">0개</span>
+      </button>
+
+      <button onclick="navSelect('game')" id="side-nav-game" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-slate-700 hover:bg-indigo-50/60 hover:text-indigo-600">
+        <span class="text-lg">🎮</span>
+        <span>독서 게임 (9종)</span>
+      </button>
+
+      <button onclick="navSelect('recommend')" id="side-nav-recommend" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-slate-700 hover:bg-indigo-50/60 hover:text-indigo-600">
+        <span class="text-lg">🌟</span>
+        <span>학년별 추천도서</span>
+      </button>
+
+      <button onclick="navSelect('calendar')" id="side-nav-calendar" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-slate-700 hover:bg-indigo-50/60 hover:text-indigo-600">
+        <span class="text-lg">📅</span>
+        <span>독서 달력</span>
+      </button>
+
+      <button onclick="navSelect('stats')" id="side-nav-stats" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-slate-700 hover:bg-indigo-50/60 hover:text-indigo-600">
+        <span class="text-lg">📊</span>
+        <span>연간 통계</span>
+      </button>
+
+      <button onclick="navSelect('promise')" id="side-nav-promise" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-slate-700 hover:bg-indigo-50/60 hover:text-indigo-600">
+        <span class="text-lg">🎁</span>
+        <span>부모님과의 약속</span>
+      </button>
+
+      <button onclick="navSelect('backup')" id="side-nav-backup" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-slate-700 hover:bg-indigo-50/60 hover:text-indigo-600">
+        <span class="text-lg">☁️</span>
+        <span>백업/복원</span>
+      </button>
+    </nav>
+
+    <!-- Drawer Footer Actions -->
+    <div class="p-4 border-t border-indigo-50 bg-slate-50/60 space-y-2">
+      <button onclick="closeSidebar(); openModalManual()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm">
+        <i data-lucide="edit-3" class="w-4 h-4"></i>
+        <span>새 독서록 직접 작성</span>
+      </button>
+      <div class="flex gap-2">
+        <button onclick="closeSidebar(); openSearchModal()" class="flex-1 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5">
+          <i data-lucide="search" class="w-3.5 h-3.5"></i>
+          <span>도서 검색</span>
+        </button>
+        <button onclick="closeSidebar(); openScanModal()" class="flex-1 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5">
+          <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
+          <span>바코드</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Header -->
+  <header class="bg-white/95 backdrop-blur-md border-b border-indigo-100 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+      <!-- Left: Hamburger Trigger + Brand Title -->
+      <div class="flex items-center gap-2.5 sm:gap-3">
+        <button onclick="openSidebar()" aria-label="메뉴 열기" class="p-2.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 rounded-xl transition-colors flex items-center justify-center">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <div class="flex items-center gap-2 cursor-pointer select-none" onclick="switchView('dashboard')">
+          <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-xs">
+            <i data-lucide="book-open" class="w-5 h-5"></i>
+          </div>
+          <span class="text-xl font-extrabold tracking-tight text-indigo-950">SJJ BOOKS</span>
+        </div>
+      </div>
+
+      <!-- Right: Level Badge & User Profile & Quick Actions -->
+      <div class="flex items-center gap-2 sm:gap-2.5">
+        <!-- 1000P Continent Stage Badge -->
+        <div onclick="openSidebar()" class="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200/90 shadow-2xs cursor-pointer hover:bg-amber-100/60 transition-colors">
+          <span id="userLevelIcon" class="text-base sm:text-lg leading-none">🌍</span>
+          <div class="text-[11px] sm:text-xs">
+            <span class="font-extrabold text-amber-950" id="userLevelName">아프리카 대륙</span>
+            <span class="text-amber-300 mx-1">|</span>
+            <span class="text-amber-700 font-extrabold" id="userPoints">0 P</span>
+          </div>
+        </div>
+
+        <!-- User Profile Pill Button (사진 변경 및 정보 확인) -->
+        <button onclick="openProfileModal()" class="flex items-center gap-1.5 p-1 bg-white border border-slate-200 hover:border-indigo-400 rounded-full transition-all shadow-2xs">
+          <div id="headerUserAvatar" class="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs overflow-hidden">
+            👤
+          </div>
+        </button>
+
+        <button onclick="openModalManual()" class="hidden md:flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-2 rounded-xl text-xs transition-all shadow-xs">
+          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+          <span>직접 쓰기</span>
+        </button>
+
+        <button onclick="openSearchModal()" class="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold px-3 py-2 rounded-xl border border-indigo-200 text-xs transition-colors">
+          <i data-lucide="search" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">도서 검색</span>
+        </button>
+
+        <button onclick="openScanModal()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-xs transition-colors">
+          <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">바코드</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-6xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
+
+    <!-- Daily Changing Book Quote Banner -->
+    <div class="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 text-white rounded-3xl p-5 sm:p-6 shadow-md relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="absolute -right-10 -bottom-10 opacity-10 pointer-events-none text-9xl">📚</div>
+      <div class="relative z-10 max-w-3xl">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-[10px] font-black uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full text-indigo-100 flex items-center gap-1">
+            <i data-lucide="sparkles" class="w-3 h-3 text-amber-300"></i>
+            <span>오늘의 책 속 한 문장</span>
+          </span>
+          <span id="dailyQuoteDate" class="text-[11px] text-indigo-200 font-medium"></span>
+        </div>
+        <p id="dailyQuoteText" class="text-sm sm:text-base font-bold text-white/95 leading-relaxed italic">"가장 중요한 것은 눈에 보이지 않아. 마음으로 보아야 분명하게 보인단다."</p>
+        <p id="dailyQuoteSource" class="text-xs text-indigo-300 font-semibold mt-1.5">생텍쥐페리 『어린 왕자』 중</p>
+      </div>
+      <button onclick="renderDailyQuote(true)" class="relative z-10 text-xs bg-white/10 hover:bg-white/20 active:bg-white/30 text-white px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition-colors flex-shrink-0">
+        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+        <span>다른 문장 보기</span>
+      </button>
+    </div>
+
+    <!-- View 1: Main Dashboard (My Library) -->
+    <section id="view-dashboard" class="view-panel">
+      <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-6">
+        <div class="flex items-center bg-slate-200/70 p-1 rounded-xl w-full sm:w-auto text-sm font-semibold">
+          <button onclick="filterStatus('all')" id="tab-all" class="tab-btn flex-1 sm:flex-initial px-4 py-1.5 rounded-lg bg-white shadow-xs text-indigo-900">전체</button>
+          <button onclick="filterStatus('reading')" id="tab-reading" class="tab-btn flex-1 sm:flex-initial px-4 py-1.5 rounded-lg text-slate-600">읽는 중</button>
+          <button onclick="filterStatus('completed')" id="tab-completed" class="tab-btn flex-1 sm:flex-initial px-4 py-1.5 rounded-lg text-slate-600">완독</button>
+          <button onclick="filterStatus('wish')" id="tab-wish" class="tab-btn flex-1 sm:flex-initial px-4 py-1.5 rounded-lg text-slate-600">읽고 싶은 책</button>
+        </div>
+
+        <div class="relative w-full sm:w-72">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+          <input type="text" id="searchInput" oninput="renderBooks()" placeholder="내 서재 도서 제목, 저자 검색..." class="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium">
+        </div>
+      </div>
+
+      <div id="bookGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+      
+      <div id="emptyState" class="hidden text-center py-20 bg-white rounded-3xl border border-dashed border-indigo-200 p-6">
+        <div class="text-5xl mb-3">📚</div>
+        <p class="text-slate-800 font-extrabold text-lg">아직 서재에 등록된 책이 없습니다!</p>
+        <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">상단의 도서 검색이나 바코드 스캔, 또는 왼쪽 메뉴의 추천도서를 통해 첫 책을 등록해보세요.</p>
+        <button onclick="openModalManual()" class="mt-4 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-xs">
+          첫 독서록 작성하기
+        </button>
+      </div>
+    </section>
+
+    <!-- View: MY Reading Tree (읽은 책들이 나무 열매로 매달리는 코너) -->
+    <section id="view-tree" class="view-panel hidden">
+      <div class="bg-gradient-to-b from-sky-100 via-emerald-50/50 to-amber-50/60 rounded-3xl p-6 sm:p-8 shadow-sm border border-emerald-100 relative overflow-hidden">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-emerald-200/60 mb-6">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-3xl">🌳</span>
+              <h2 class="text-xl font-black text-emerald-950 tracking-tight">MY 지혜의 독서 나무</h2>
+            </div>
+            <p class="text-xs text-emerald-800/80 mt-1">완독한 책들이 탐스러운 열매가 되어 독서 나무에 매달립니다! 열매를 누르면 책 정보를 볼 수 있어요.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="treeStatsBadge" class="px-3.5 py-1.5 rounded-full text-xs font-black bg-emerald-600 text-white shadow-2xs">완독 열매 0송이</span>
+          </div>
+        </div>
+
+        <!-- Tree Canvas Stage -->
+        <div class="relative w-full min-h-[460px] sm:min-h-[520px] bg-gradient-to-t from-emerald-100/70 via-white/80 to-sky-50 rounded-3xl border border-emerald-200 p-4 flex flex-col items-center justify-center overflow-hidden shadow-inner">
+          <!-- Background SVG Giant Tree -->
+          <svg class="absolute inset-x-0 bottom-0 w-full h-[480px] pointer-events-none select-none" viewBox="0 0 800 600" preserveAspectRatio="xMidYMax meet">
+            <!-- Ground Hill -->
+            <path d="M-100,600 Q400,530 900,600 L900,620 L-100,620 Z" fill="#84cc16" opacity="0.4"/>
+            <path d="M-50,600 Q400,560 850,600 L850,620 L-50,620 Z" fill="#65a30d" opacity="0.6"/>
+            <!-- Trunk & Big Branches -->
+            <path d="M375,580 C370,420 330,320 220,240 C310,260 360,330 388,400 C395,330 435,270 570,220 C470,260 425,330 415,410 C428,340 450,280 405,580 Z" fill="#854d0e"/>
+            <!-- Foliage Clouds (Big Soft Tree Crowns) -->
+            <circle cx="400" cy="220" r="160" fill="#22c55e" opacity="0.85"/>
+            <circle cx="270" cy="230" r="120" fill="#16a34a" opacity="0.9"/>
+            <circle cx="530" cy="230" r="120" fill="#15803d" opacity="0.9"/>
+            <circle cx="340" cy="140" r="110" fill="#4ade80" opacity="0.95"/>
+            <circle cx="460" cy="140" r="110" fill="#86efac" opacity="0.85"/>
+            <circle cx="400" cy="120" r="90" fill="#bbf7d0" opacity="0.9"/>
+          </svg>
+
+          <!-- Empty Tree State Message -->
+          <div id="treeEmptyNotice" class="relative z-10 text-center py-12 px-4 max-w-sm bg-white/80 backdrop-blur-md rounded-2xl border border-emerald-200 shadow-sm hidden">
+            <span class="text-4xl block mb-2">🌱</span>
+            <h4 class="text-sm font-black text-slate-800">아직 나무에 열매가 맺히지 않았어요!</h4>
+            <p class="text-xs text-slate-500 mt-1">책을 읽고 <strong>[완독]</strong>으로 상태를 저장하면 지혜의 나무에 알록달록한 책 열매가 주렁주렁 열립니다.</p>
+            <button onclick="openModalManual()" class="mt-3 px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 transition-colors shadow-2xs">
+              완독 책 등록하기
+            </button>
+          </div>
+
+          <!-- Hanging Book Fruits Container (Dynamic Positioning) -->
+          <div id="treeFruitsLayer" class="relative z-10 w-full h-[440px] pointer-events-auto"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- View 2: Book World Cup (32강 토너먼트) -->
+    <section id="view-worldcup" class="view-panel hidden">
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-indigo-100">
+        <!-- World Cup Header -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-100 mb-6">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">🏆</span>
+              <h2 class="text-xl font-black text-slate-900 tracking-tight">명작 도서 이상형 월드컵 (32선)</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">내가 가장 좋아하는 인생 명작 도서 32권 중 최고의 도서를 1:1 토너먼트로 뽑아보세요!</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="worldcupRoundBadge" class="px-3.5 py-1.5 rounded-full text-xs font-black bg-amber-500 text-white shadow-2xs">32강 준비 중</span>
+            <button onclick="resetWorldCup()" class="p-2 border border-slate-200 hover:bg-slate-100 rounded-xl text-slate-600 transition-colors" title="처음부터 다시하기">
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- World Cup Intro Screen -->
+        <div id="worldcupIntroScreen" class="text-center py-12 max-w-xl mx-auto space-y-4">
+          <div class="text-6xl animate-bounce">👑</div>
+          <h3 class="text-2xl font-black text-slate-900">당신의 가슴을 울린 최고의 책은?</h3>
+          <p class="text-sm text-slate-600 leading-relaxed">
+            어린이 필수 명작 동화부터 감동적인 소설과 세계 고전 32권이 1:1 맞대결을 펼칩니다.<br>
+            최종 우승 도서를 뽑으면 <strong>서재 즉시 담기</strong> 및 <strong>+5 P 독서 보너스</strong>가 지급됩니다!
+          </p>
+          <div class="pt-4">
+            <button onclick="startWorldCup()" class="px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-base rounded-2xl shadow-lg shadow-orange-500/25 transition-all transform active:scale-95 flex items-center gap-2 mx-auto">
+              <i data-lucide="play" class="w-5 h-5"></i>
+              <span>32강 월드컵 시작하기</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- World Cup Match Screen -->
+        <div id="worldcupMatchScreen" class="hidden space-y-6">
+          <div class="flex items-center justify-between text-xs font-bold text-slate-500 px-2">
+            <span id="worldcupMatchInfo">32강 1 / 16 매치</span>
+            <span id="worldcupProgressText">진행률 0%</span>
+          </div>
+          <!-- Progress bar -->
+          <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+            <div id="worldcupProgressBar" class="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+
+          <!-- VS Battle Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            <!-- Candidate Left -->
+            <div onclick="selectWorldCupWinner(0)" class="worldcup-card bg-gradient-to-b from-indigo-50/40 via-white to-slate-50 border-2 border-indigo-100 hover:border-indigo-500 rounded-3xl p-6 sm:p-8 cursor-pointer flex flex-col items-center text-center shadow-sm hover:shadow-xl relative overflow-hidden group">
+              <span class="absolute top-4 left-4 text-[11px] font-black bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">선택 A</span>
+              <div id="wcLeftIcon" class="text-6xl sm:text-7xl my-4 transform group-hover:scale-110 transition-transform">📚</div>
+              <span id="wcLeftTag" class="text-[11px] font-bold text-indigo-600 bg-white border border-indigo-200 px-2.5 py-0.5 rounded-full mb-2">동화/명작</span>
+              <h4 id="wcLeftTitle" class="text-xl sm:text-2xl font-black text-slate-900 mb-1 leading-snug">어린 왕자</h4>
+              <p id="wcLeftAuthor" class="text-sm font-semibold text-slate-500 mb-3">생텍쥐페리 저</p>
+              <p id="wcLeftDesc" class="text-xs text-slate-600 leading-relaxed max-w-sm mb-6 bg-white/80 p-3 rounded-2xl border border-slate-100">"가장 중요한 것은 눈에 보이지 않아."</p>
+              <button class="w-full py-3 bg-indigo-600 text-white font-extrabold rounded-2xl text-sm group-hover:bg-indigo-700 transition-colors shadow-xs">이 책을 선택하기</button>
+            </div>
+
+            <!-- Candidate Right -->
+            <div onclick="selectWorldCupWinner(1)" class="worldcup-card bg-gradient-to-b from-orange-50/40 via-white to-slate-50 border-2 border-orange-100 hover:border-orange-500 rounded-3xl p-6 sm:p-8 cursor-pointer flex flex-col items-center text-center shadow-sm hover:shadow-xl relative overflow-hidden group">
+              <span class="absolute top-4 right-4 text-[11px] font-black bg-orange-100 text-orange-700 px-3 py-1 rounded-full">선택 B</span>
+              <div id="wcRightIcon" class="text-6xl sm:text-7xl my-4 transform group-hover:scale-110 transition-transform">📖</div>
+              <span id="wcRightTag" class="text-[11px] font-bold text-orange-600 bg-white border border-orange-200 px-2.5 py-0.5 rounded-full mb-2">창작동화</span>
+              <h4 id="wcRightTitle" class="text-xl sm:text-2xl font-black text-slate-900 mb-1 leading-snug">구름빵</h4>
+              <p id="wcRightAuthor" class="text-sm font-semibold text-slate-500 mb-3">백희나 저</p>
+              <p id="wcRightDesc" class="text-xs text-slate-600 leading-relaxed max-w-sm mb-6 bg-white/80 p-3 rounded-2xl border border-slate-100">"구름을 먹고 하늘을 둥실 날아 아빠를 도왔어요."</p>
+              <button class="w-full py-3 bg-orange-500 text-white font-extrabold rounded-2xl text-sm group-hover:bg-orange-600 transition-colors shadow-xs">이 책을 선택하기</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- World Cup Winner Victory Screen -->
+        <div id="worldcupWinnerScreen" class="hidden text-center py-10 max-w-lg mx-auto space-y-5">
+          <div class="inline-block p-4 bg-amber-100 rounded-full text-5xl animate-bounce">🏆</div>
+          <div>
+            <span class="text-xs font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">WORLD CUP CHAMPION</span>
+            <h3 class="text-2xl sm:text-3xl font-black text-slate-900 mt-2">나의 인생 도서 1위 선정!</h3>
+          </div>
+          <div class="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 p-6 rounded-3xl border-2 border-amber-300 shadow-lg text-center">
+            <div id="wcWinnerIcon" class="text-6xl mb-3">👑</div>
+            <h4 id="wcWinnerTitle" class="text-2xl font-black text-amber-950">어린 왕자</h4>
+            <p id="wcWinnerAuthor" class="text-sm font-bold text-amber-800 mt-1">생텍쥐페리 저</p>
+            <p id="wcWinnerDesc" class="text-xs text-amber-900/80 mt-3 bg-white/80 p-3 rounded-xl border border-amber-200"></p>
+            <div class="mt-4 flex items-center justify-center gap-2 text-xs font-black text-emerald-700 bg-emerald-50 py-1.5 px-3 rounded-full border border-emerald-200 inline-flex">
+              <span>🎉 월드컵 완주 보너스 +5 P 획득!</span>
+            </div>
+          </div>
+          <div class="flex flex-col sm:flex-row gap-3 pt-2">
+            <button id="wcAddLibraryBtn" onclick="addWorldCupWinnerToLibrary()" class="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span>내 서재 독서록으로 바로 담기</span>
+            </button>
+            <button onclick="startWorldCup()" class="flex-1 py-3.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-2xl text-xs flex items-center justify-center gap-2">
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+              <span>월드컵 다시 하기</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- View 3: Book Reviews Corner (책 후기 남기기) -->
+    <section id="view-reviews" class="view-panel hidden">
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-indigo-100">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-100 mb-6">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">💬</span>
+              <h2 class="text-xl font-black text-slate-900 tracking-tight">책 후기 & 한줄평 공유존</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">책을 읽고 느낀 점, 추천 이유, 별점을 솔직하고 자유롭게 남겨보세요! (+3 P 지급)</p>
+          </div>
+          <button onclick="scrollToReviewForm()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-xs">
+            <i data-lucide="message-square-plus" class="w-4 h-4"></i>
+            <span>새 후기 쓰기</span>
+          </button>
+        </div>
+
+        <!-- Write Review Form Card -->
+        <div id="reviewFormCard" class="bg-gradient-to-br from-indigo-50/60 to-purple-50/40 p-5 sm:p-6 rounded-3xl border border-indigo-100 mb-8">
+          <h3 class="text-base font-extrabold text-indigo-950 mb-3 flex items-center gap-2">
+            <span>✍️</span>
+            <span>새로운 책 후기 작성하기</span>
+          </h3>
+          <form onsubmit="submitBookReview(event)" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">책 제목 *</label>
+                <input type="text" id="reviewBookTitle" required placeholder="예: 어린 왕자, 구름빵" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">작성자(닉네임) *</label>
+                <input type="text" id="reviewAuthor" required placeholder="예: 지혜의 독서가, 3학년 민수" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">별점 *</label>
+                <select id="reviewRating" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none">
+                  <option value="5">⭐⭐⭐⭐⭐ 5점 (인생 최고의 책)</option>
+                  <option value="4">⭐⭐⭐⭐ 4점 (정말 재미있어요)</option>
+                  <option value="3">⭐⭐⭐ 3점 (읽어볼 만해요)</option>
+                  <option value="2">⭐⭐ 2점 (조금 아쉬워요)</option>
+                  <option value="1">⭐ 1점 (내 취향은 아니에요)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">추천 대상 연령</label>
+                <select id="reviewAgeGroup" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none">
+                  <option value="전 학년">누구나 읽기 좋은 책</option>
+                  <option value="초등 저학년 (1~2학년)">초등 저학년 (1~2학년)</option>
+                  <option value="초등 중학년 (3~4학년)">초등 중학년 (3~4학년)</option>
+                  <option value="초등 고학년 (5~6학년)">초등 고학년 (5~6학년)</option>
+                  <option value="청소년/성인">청소년 및 부모님</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">한 줄 키워드 태그</label>
+                <input type="text" id="reviewTag" placeholder="예: #감동 #우정 #모험 #상상력" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">솔직한 후기 내용 *</label>
+              <textarea id="reviewContent" rows="3" required placeholder="이 책의 가장 인상 깊었던 점, 기억에 남는 장면, 친구들에게 추천하고 싶은 이유를 자유롭게 적어주세요!" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none font-medium leading-relaxed"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-1">
+              <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-xs transition-colors shadow-sm flex items-center gap-1.5">
+                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                <span>후기 등록하고 +3 P 받기</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Review Filter and List -->
+        <div class="space-y-4">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+              <span>📖</span>
+              <span>남겨진 독서 후기 목록</span>
+              <span id="reviewCountBadge" class="text-xs bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-full">0</span>
+            </h3>
+            <div class="relative w-full sm:w-64">
+              <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+              <input type="text" id="reviewSearchInput" oninput="renderReviews()" placeholder="도서명 또는 작성자 검색..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none">
+            </div>
+          </div>
+
+          <div id="reviewsContainer" class="space-y-3.5"></div>
+          
+          <div id="emptyReviews" class="hidden text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <p class="text-3xl mb-2">✍️</p>
+            <p class="text-slate-700 font-bold text-sm">아직 등록된 후기가 없습니다.</p>
+            <p class="text-xs text-slate-400 mt-1">위 양식에 첫 번째 감상 후기를 남겨보세요!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- View 4: 9 Mini-Games Corner -->
+    <section id="view-game" class="view-panel hidden">
+      <div class="bg-white rounded-3xl p-6 shadow-sm border border-indigo-100 mb-6">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
+          <div>
+            <h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+              <span>🎮</span>
+              <span>SJJ BOOKS 독서 미니게임 존 (9종)</span>
+            </h2>
+            <p class="text-xs text-slate-500 mt-1">플레이할 때마다 문제가 새로 바뀌는 인터랙티브 독서 미니게임입니다!</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Game 1 -->
+          <div class="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-3xl border border-amber-100 flex flex-col justify-between">
+            <div>
+              <div class="text-3xl mb-2">🧩</div>
+              <h3 class="font-extrabold text-amber-950 text-base mb-1">책 제목 초성 퀴즈</h3>
+              <p class="text-xs text-slate-600 mb-4">매판 무작위로 추출되는 책 초성을 보고 정답을 맞춰보세요!</p>
+            </div>
+            <button onclick="startInitialQuiz()" class="w-full py-2.5 bg-amber-600 text-white font-bold rounded-xl text-xs shadow-xs hover:bg-amber-700 transition-colors">게임 시작</button>
+          </div>
+
+          <!-- Game 2 -->
+          <div class="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-3xl border border-emerald-100 flex flex-col justify-between">
+            <div>
+              <div class="text-3xl mb-2">🃏</div>
+              <h3 class="font-extrabold text-emerald-950 text-base mb-1">독서 카드 짝맞추기</h3>
+              <p class="text-xs text-slate-600 mb-4">매번 다르게 배치되는 8장의 카드 짝을 기억해 찾으세요!</p>
+            </div>
+            <button onclick="startCardGame()" class="w-full py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs shadow-xs hover:bg-emerald-700 transition-colors">게임 시작</button>
+          </div>
+
+          <!-- Game 3 -->
+          <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-5 rounded-3xl border border-indigo-100 flex flex-col justify-between">
+            <div>
+              <div class="text-3xl mb-2">🔍</div>
+              <h3 class="font-extrabold text-indigo-950 text-base mb-1">독서 어휘 숨은그림찾기</h3>
+              <p class="text-xs text-slate-600 mb-4">랜덤 글자판 속에서 목표 어휘를 차례대로 골라 완성하세요!</p>
+            </div>
+            <button onclick="startWordSearchGame()" class="w-full py-2.5 bg-indigo-600 text-white font-bold rounded-xl text-xs shadow-xs hover:bg-indigo-700 transition-colors">게임 시작</button>
+          </div>
+
+          <!-- Game 4 -->
+          <div class="bg-gradient-to-br from-rose-50 to-pink-50 p-5 rounded-3xl border border-rose-100 flex flex-col justify-between">
+            <div>
+              <div class="text-3xl mb-2">⏱️</div>
+              <h3 class="font-extrabold text-rose-950 text-base mb-1">독서 타이머 챌린지</h3>
+              <p class="text-xs text-slate-600 mb-4">매판 새로 정해지는 무작위 목표 초에 정확히 맞춰 멈추세요!</p>
+            </div>
+            <button onclick="startTimerChallenge()" class="w-full py-2.5 bg-rose-600 text-white font-bold rounded-xl text-xs shadow-xs hover:bg-rose-700 transition-colors">게임 시작</button>
+          </div>
+
+          <!-- Game 5 -->
+          <div class="bg-gradient-to-br from-cyan-50 to-blue-50 p-5 rounded-3xl border border-cyan-100 flex flex-col justify-between">
+            <div>
+              <div class="text-3xl mb-2">💡</div>
+              <h3 class="font-extrabold text-cyan-950 text-base mb-1">어휘 O/X 퀴즈</h3>
+              <p class="text-xs text-slate-600 mb-4">매판 새로 조합되는 O/X 문제 3개의 맞고 틀림을 판단하세요!</p>
+            </div>
+            <button onclick="startVocabOxGame()" class="w-full py-2.5 bg-cyan-600 text-white font-bold rounded-xl text-xs shadow-xs hover:bg-cyan-700 transition-colors">게임 시작</button>
+          </div>
+
+          <!-- Game 6 -->
+          <div class="bg-gradient-to-br from-fuchsia-50 to-pink-50 p-5 rounded-3xl border border-fuchsia-100 flex flex-col justify-between">
+            <div>
+              <div class="text-3xl mb-2">📚</div>
+              <h3 class="font-extrabold text-fuchsia-950 text-base mb-1">도서 장르 맞히기</h3>
+              <p class="text-xs text-slate-600 mb-4">랜덤 출제되는 도서 제목을 보고 알맞은 장르를 선택하세요!</p>
+            </div>
+            <button onclick="startGenreMatchingGame()" class="w-full py-2.5 bg-fuchsia-600 text-white font-bold rounded-xl text-xs shadow-xs hover:bg-fuchsia-700 transition-colors">게임 시작</button>
+          </div>
+
+          <!-- Game 7 -->
+          <div class="bg-gradient-to-br from-yellow-50 to-amber-50 p-5 rounded-3xl border border-yellow-100 flex flex-col justify-between">
+            <div>
+              <div class="text-3xl mb-2">✨</div>
+              <h3 class="font-extrabold text-amber-950 text-base mb-1">속담 & 사자성어 퀴즈</h3>
+              <p class="text-xs text-slate-600 mb-4">책 속에 자주 등장하는 필수 속담과 사자성어 빈칸을 맞히세요!</p>
+            </div>
+            <button onclick="startProverbGame()" class="w-full py-2.5 bg-yellow-600 text-white font-bold rounded-xl text-xs shadow-xs hover:bg-yellow-700 transition-colors">게임 시작</button>
+          </div>
+
+          <!-- Game 8 -->
+          <div class="bg-gradient-to-br from-violet-50 to-purple-50 p-5 rounded-3xl border border-violet-100 flex flex-col justify-between">
+            <div>
+              <div class="text-3xl mb-2">👑</div>
+              <h3 class="font-extrabold text-violet-950 text-base mb-1">책 속 주인공 맞히기</h3>
+              <p class="text-xs text-slate-600 mb-4">줄거리 힌트 설명을 읽고 명작 동화 속 주인공을 맞혀보세요!</p>
+            </div>
+            <button onclick="startHeroGame()" class="w-full py-2.5 bg-violet-600 text-white font-bold rounded-xl text-xs shadow-xs hover:bg-violet-700 transition-colors">게임 시작</button>
+          </div>
+
+          <!-- Game 9 -->
+          <div class="bg-gradient-to-br from-teal-50 to-emerald-50 p-5 rounded-3xl border border-teal-100 flex flex-col justify-between">
+            <div>
+              <div class="text-3xl mb-2">📖</div>
+              <h3 class="font-extrabold text-teal-950 text-base mb-1">문장 빈칸 채우기</h3>
+              <p class="text-xs text-slate-600 mb-4">문맥에 어울리는 풍부한 어휘를 선택해 문장을 완성해보세요!</p>
+            </div>
+            <button onclick="startFillBlankGame()" class="w-full py-2.5 bg-teal-600 text-white font-bold rounded-xl text-xs shadow-xs hover:bg-teal-700 transition-colors">게임 시작</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Game Playground Container -->
+      <div id="gamePlayground" class="bg-white rounded-3xl p-6 shadow-sm border border-indigo-100 hidden">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+          <h3 class="text-base font-extrabold text-slate-900" id="gameTitle">게임 진행 중</h3>
+          <button onclick="closeGamePlayground()" class="text-xs text-slate-400 font-bold hover:text-slate-600 p-1">게임 닫기</button>
+        </div>
+        <div id="gameArea" class="min-h-[220px]"></div>
+      </div>
+    </section>
+
+    <!-- View 5: Weekly Recommended Books -->
+    <section id="view-recommend" class="view-panel hidden">
+      <div class="bg-white rounded-3xl p-6 shadow-sm border border-indigo-100 mb-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+          <div>
+            <h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+              <span>🌟</span>
+              <span>학년별 주간 추천 도서</span>
+            </h2>
+            <p class="text-xs text-slate-500 mt-1" id="weeklyRecommendTag">매주 한글책 2권 + 영어책 2권이 엄선되어 제공됩니다. 클릭 시 즉시 서재에 추가할 수 있습니다.</p>
+          </div>
+
+          <div class="flex bg-slate-100 p-1 rounded-2xl text-xs font-bold text-slate-600">
+            <button onclick="switchGrade('g12')" id="grade-g12" class="grade-btn px-4 py-2 rounded-xl bg-indigo-600 text-white">1~2학년</button>
+            <button onclick="switchGrade('g34')" id="grade-g34" class="grade-btn px-4 py-2 rounded-xl">3~4학년</button>
+            <button onclick="switchGrade('g56')" id="grade-g56" class="grade-btn px-4 py-2 rounded-xl">5~6학년</button>
+          </div>
+        </div>
+
+        <div id="recommendBookGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+      </div>
+    </section>
+
+    <!-- View 6: Calendar View (Multiple Books per Day) -->
+    <section id="view-calendar" class="view-panel hidden">
+      <div class="bg-white rounded-3xl p-6 shadow-sm border border-indigo-100">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-extrabold text-slate-900" id="calendarTitle">2026년 10월</h2>
+          <div class="flex gap-2">
+            <button onclick="changeMonth(-1)" class="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+            <button onclick="changeMonth(1)" class="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+        <div class="grid grid-cols-7 gap-2 text-center text-xs font-bold text-slate-400 mb-2">
+          <div class="text-rose-500">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-indigo-500">토</div>
+        </div>
+        <div id="calendarGrid" class="grid grid-cols-7 gap-2"></div>
+      </div>
+    </section>
+
+    <!-- View 7: Stats View -->
+    <section id="view-stats" class="view-panel hidden">
+      <div class="bg-white rounded-3xl p-6 shadow-sm border border-indigo-100 mb-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-extrabold text-slate-900">📊 연간 완독 통계</h2>
+          <select id="statsYear" onchange="renderStats()" class="border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold outline-none"></select>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center mb-6">
+          <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
+            <p class="text-xs font-bold text-indigo-600 mb-1">올해 총 완독 도서</p>
+            <p id="statTotalCompleted" class="text-3xl font-black text-indigo-950">0권</p>
+          </div>
+          <div class="bg-amber-50 p-4 rounded-2xl border border-amber-100">
+            <p class="text-xs font-bold text-amber-600 mb-1">누적 포인트 획득</p>
+            <p id="statTotalPoints" class="text-3xl font-black text-amber-950">0 P</p>
+          </div>
+          <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+            <p class="text-xs font-bold text-emerald-600 mb-1">최다 독서 월</p>
+            <p id="statBestMonth" class="text-3xl font-black text-emerald-950">-</p>
+          </div>
+        </div>
+        <h3 class="text-sm font-bold text-slate-700 mb-3">월별 완독 권수 분포</h3>
+        <div id="statsMonthlyBar" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- View 8: Promise View -->
+    <section id="view-promise" class="view-panel hidden">
+      <div class="bg-white rounded-3xl p-6 shadow-sm border border-indigo-100">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-lg font-extrabold text-slate-900">🎁 부모님과의 약속 (선물 보상)</h2>
+            <p class="text-xs text-slate-500 mt-0.5">목표 포인트를 달성하여 약속한 선물을 획득해보세요!</p>
+          </div>
+          <button onclick="openPromiseModal()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-2 rounded-xl transition-colors">+ 약속 추가하기</button>
+        </div>
+        <div id="promiseList" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- View 9: Backup View -->
+    <section id="view-backup" class="view-panel hidden">
+      <div class="bg-white rounded-3xl p-6 shadow-sm border border-indigo-100 max-w-xl mx-auto">
+        <h2 class="text-lg font-extrabold text-slate-900 mb-2">☁️ 데이터 백업 및 복원</h2>
+        <p class="text-xs text-slate-500 mb-6">작성한 모든 독서록과 후기, 포인트, 약속 데이터를 JSON 파일로 안전하게 백업하거나 복원할 수 있습니다.</p>
+        <div class="space-y-3">
+          <button onclick="exportData()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-2">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>데이터 내보내기 (JSON 백업 파일 저장)</span>
+          </button>
+          <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+          <button onclick="document.getElementById('importFile').click()" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-2">
+            <i data-lucide="upload" class="w-4 h-4"></i>
+            <span>데이터 불러오기 (백업 파일 복원)</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal 1: Search Modal (With Children Books Filter) -->
+  <div id="searchModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+        <h3 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+          <span>🌐</span>
+          <span>전 세계 도서 검색 데이터베이스</span>
+        </h3>
+        <button onclick="closeSearchModal()" class="text-slate-400 hover:text-slate-600 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <!-- Search Category Toggle -->
+      <div class="flex gap-2 mb-3">
+        <button type="button" onclick="setSearchFilter('kids')" id="filterKidsBtn" class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-indigo-600 text-white transition-all shadow-xs">
+          👧 어린이 책 전용 검색
+        </button>
+        <button type="button" onclick="setSearchFilter('all')" id="filterAllBtn" class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">
+          🌐 전체 일반 도서 검색
+        </button>
+      </div>
+
+      <form onsubmit="searchKoreanAndEnglishBooks(event)" class="flex gap-2 mb-2">
+        <input type="text" id="apiQuery" required placeholder="어린이 동화, 그림책, 저자, 출판사, ISBN 검색..." class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none font-medium">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm flex items-center gap-1.5 transition-colors">
+          <i data-lucide="search" class="w-4 h-4"></i>
+          <span>검색</span>
+        </button>
+      </form>
+
+      <div id="searchResults" class="flex-1 overflow-y-auto space-y-3 pr-1 min-h-[280px]">
+        <div class="text-center text-slate-400 text-sm py-12">
+          수만 권 이상의 국내외 어린이 동화책 및 도서 DB가 실시간으로 검색됩니다.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Scanner (Reliable Stop & Close) -->
+  <div id="scanModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+          <i data-lucide="qr-code" class="w-4 h-4 text-indigo-600"></i>
+          <span>실시간 바코드(ISBN) 스캐너</span>
+        </h3>
+        <button type="button" onclick="closeScanModal()" class="text-slate-400 hover:text-slate-700 p-1 transition-colors">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <div id="scannerReader" class="overflow-hidden rounded-2xl bg-slate-900 min-h-[220px] flex items-center justify-center text-white text-xs">
+        카메라 연결 준비 중...
+      </div>
+      <p class="text-[11px] text-slate-400 text-center mt-2.5">책 뒷면의 바코드를 상자 안에 맞춰 비춰주세요.</p>
+
+      <div class="mt-4 pt-3 border-t border-slate-100 flex gap-2">
+        <input type="text" id="manualIsbnInput" placeholder="바코드 번호(ISBN 13자리) 직접 입력" class="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs outline-none">
+        <button type="button" onclick="submitManualIsbn()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors">검색</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Book Form (Add / Edit) -->
+  <div id="bookModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+        <h3 class="text-lg font-extrabold text-slate-900">✍️ 독서록 작성 및 도서 등록</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="bookForm" onsubmit="saveBook(event)" class="space-y-4">
+        <input type="hidden" id="coverUrl">
+        
+        <div id="coverPreviewContainer" class="flex items-center gap-4 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100 hidden">
+          <img id="coverPreview" src="" referrerpolicy="no-referrer" class="w-14 h-20 object-cover rounded-lg shadow-xs border border-slate-200">
+          <p class="text-xs text-indigo-900 font-bold">도서 표지가 선택되었습니다.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">책 제목 *</label>
+          <input type="text" id="title" required placeholder="책 제목 입력" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none font-semibold">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">저자(지은이) *</label>
+            <input type="text" id="author" required placeholder="저자 이름" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none font-medium">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">읽은 날짜</label>
+            <input type="date" id="readDate" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none font-medium">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">독서 상태</label>
+            <select id="status" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none font-medium">
+              <option value="reading">📖 읽는 중</option>
+              <option value="completed" selected>✅ 완독 (+5P)</option>
+              <option value="wish">⭐ 읽고 싶은 책</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">내 별점</label>
+            <select id="rating" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none font-medium">
+              <option value="5">⭐⭐⭐⭐⭐ (5점)</option>
+              <option value="4">⭐⭐⭐⭐ (4점)</option>
+              <option value="3">⭐⭐⭐ (3점)</option>
+              <option value="2">⭐⭐ (2점)</option>
+              <option value="1">⭐ (1점)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">표지 대체 배경 색상</label>
+          <div class="flex gap-3 pt-1">
+            <label class="cursor-pointer"><input type="radio" name="coverBg" value="bg-indigo-600" checked class="hidden peer"><div class="w-7 h-7 rounded-full bg-indigo-600 peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-indigo-600"></div></label>
+            <label class="cursor-pointer"><input type="radio" name="coverBg" value="bg-emerald-600" class="hidden peer"><div class="w-7 h-7 rounded-full bg-emerald-600 peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-emerald-600"></div></label>
+            <label class="cursor-pointer"><input type="radio" name="coverBg" value="bg-amber-600" class="hidden peer"><div class="w-7 h-7 rounded-full bg-amber-600 peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-amber-600"></div></label>
+            <label class="cursor-pointer"><input type="radio" name="coverBg" value="bg-rose-600" class="hidden peer"><div class="w-7 h-7 rounded-full bg-rose-600 peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-rose-600"></div></label>
+            <label class="cursor-pointer"><input type="radio" name="coverBg" value="bg-slate-700" class="hidden peer"><div class="w-7 h-7 rounded-full bg-slate-700 peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-slate-700"></div></label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">내 독서록 원문 *</label>
+          <textarea id="notes" rows="4" placeholder="책 줄거리와 감동받은 생각, 솔직한 느낌을 적어주세요..." class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none font-medium"></textarea>
+        </div>
+
+        <div class="bg-indigo-50/60 p-4 rounded-2xl border border-indigo-100 space-y-2">
+          <div class="flex justify-between items-center">
+            <label class="block text-xs font-extrabold text-indigo-900 flex items-center gap-1">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-600"></i>
+              <span>문장 단위 맞춤 AI 첨삭</span>
+            </label>
+            <button type="button" onclick="runAdvancedAiProofread()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-bold shadow-2xs transition-colors">
+              첨삭 실행
+            </button>
+          </div>
+          <div id="aiProofreadDisplay" class="text-xs text-slate-700 bg-white p-3.5 rounded-xl border border-indigo-100 min-h-[90px] leading-relaxed font-medium whitespace-pre-line">
+            독서록 작성 후 '첨삭 실행' 버튼을 누르면 문장 분석, 교정, 어휘 추천이 실행됩니다.
+          </div>
+          <input type="hidden" id="aiProofread">
+        </div>
+
+        <div class="pt-3 flex gap-2 justify-end">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700">취소</button>
+          <button type="submit" class="px-5 py-2 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition-colors">저장하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: View Detail Modal -->
+  <div id="detailModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+        <span id="detailBadge" class="text-xs px-3 py-1 rounded-full font-bold"></span>
+        <div class="flex items-center gap-2">
+          <button id="deleteBtn" class="text-xs text-rose-600 font-bold px-2.5 py-1 hover:bg-rose-50 rounded-lg transition-colors">삭제</button>
+          <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+      </div>
+      <div>
+        <div class="flex gap-4 mb-4">
+          <div id="detailCoverContainer" class="flex-shrink-0"></div>
+          <div>
+            <h2 id="detailTitle" class="text-xl font-extrabold text-slate-900 mb-1 leading-snug"></h2>
+            <p id="detailAuthor" class="text-sm font-medium text-slate-500 mb-2"></p>
+            <div class="text-amber-400 text-sm tracking-widest mb-1" id="detailStars"></div>
+            <p id="detailDate" class="text-xs text-slate-400 font-medium"></p>
+          </div>
+        </div>
+        <div class="space-y-4 mb-6">
+          <div>
+            <h4 class="text-xs font-extrabold text-slate-400 uppercase mb-1">내가 적은 독서록 원문</h4>
+            <p id="detailNotes" class="text-sm text-slate-700 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 min-h-[60px] whitespace-pre-line leading-relaxed font-medium"></p>
+          </div>
+          <div>
+            <h4 class="text-xs font-extrabold text-indigo-600 uppercase mb-1 flex items-center gap-1">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>AI 문장 심화 첨삭</span>
+            </h4>
+            <div id="detailProofread" class="text-xs text-indigo-950 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 min-h-[80px] whitespace-pre-line leading-relaxed font-medium"></div>
+          </div>
+        </div>
+        <button id="startQuizBtn" class="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold rounded-2xl shadow-md transition-all">
+          🎯 도서 5문제 시험 풀어보기 (만점 시 +5P)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Quiz Modal -->
+  <div id="quizModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <span class="text-xs font-extrabold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full" id="quizProgress">문제 1 / 5</span>
+        <button onclick="closeQuizModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div id="quizContent">
+        <h3 id="quizQuestion" class="text-base font-extrabold text-slate-900 mb-4 leading-snug"></h3>
+        <div id="quizOptions" class="space-y-2.5 mb-6"></div>
+      </div>
+      <div id="quizResult" class="hidden text-center py-4">
+        <div class="text-5xl mb-3" id="resultEmoji">🎉</div>
+        <h3 class="text-xl font-extrabold text-slate-900 mb-1" id="resultTitle">시험 완료!</h3>
+        <p class="text-sm font-bold text-indigo-600 mb-6" id="resultScore"></p>
+        <button onclick="closeQuizModal()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition-colors">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 6: Add Promise Modal -->
+  <div id="promiseModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+      <h3 class="text-lg font-extrabold text-slate-900 mb-4">🎁 부모님과의 약속 등록</h3>
+      <form onsubmit="savePromise(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">약속 선물 이름 *</label>
+          <input type="text" id="promiseTitle" required placeholder="예: 원하는 레고 세트, 용돈 1만원" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none font-medium">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">목표 포인트 (P) *</label>
+          <input type="number" id="promiseTarget" required min="10" placeholder="예: 50" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none font-medium">
+        </div>
+        <div class="pt-2 flex gap-2 justify-end">
+          <button type="button" onclick="closePromiseModal()" class="px-4 py-2 text-sm font-bold text-slate-500">취소</button>
+          <button type="submit" class="px-5 py-2 text-sm font-bold bg-indigo-600 text-white rounded-xl">등록하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 7: User Profile Modal (프로필 사진 변경 및 내 정보 관리) -->
+  <div id="profileModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center">
+      <div class="flex justify-between items-center pb-2 border-b border-slate-100 mb-4">
+        <h3 class="text-sm font-black text-slate-900">내 독서 프로필</h3>
+        <button onclick="closeProfileModal()" class="text-slate-400 hover:text-slate-600 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="relative w-24 h-24 mx-auto mb-3">
+        <div id="profileModalAvatar" class="w-24 h-24 rounded-full bg-indigo-600 text-white text-3xl font-black flex items-center justify-center overflow-hidden border-4 border-indigo-100 shadow-md">
+          👤
+        </div>
+        <label for="profileUploadInput" class="absolute bottom-0 right-0 p-2 bg-indigo-600 text-white rounded-full shadow-md cursor-pointer hover:bg-indigo-700 transition-colors">
+          <i data-lucide="camera" class="w-4 h-4"></i>
+        </label>
+        <input type="file" id="profileUploadInput" accept="image/*" onchange="handleProfilePhotoUpload(event)" class="hidden">
+      </div>
+
+      <h4 id="profileModalNickname" class="text-base font-black text-slate-900">독서가</h4>
+      <p id="profileModalHandle" class="text-xs font-semibold text-indigo-600 mb-4">@user</p>
+
+      <div class="bg-indigo-50/70 p-3 rounded-2xl border border-indigo-100 text-xs font-bold text-indigo-950 mb-4 flex justify-around">
+        <div>
+          <span class="block text-slate-400 text-[10px]">내 포인트</span>
+          <span id="profileModalPoints" class="text-sm font-black text-amber-600">0 P</span>
+        </div>
+        <div>
+          <span class="block text-slate-400 text-[10px]">완독 권수</span>
+          <span id="profileModalCompletedCount" class="text-sm font-black text-emerald-600">0권</span>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <button onclick="closeProfileModal(); handleLogout();" class="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span>계정 로그아웃</span>
+        </button>
+        <button onclick="closeProfileModal()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 8: Custom Logout Confirm Modal (iFrame 친화적 안전 로그아웃) -->
+  <div id="logoutModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-xs w-full p-6 shadow-2xl border border-slate-100 text-center animate-in fade-in zoom-in-95 duration-200">
+      <div class="w-12 h-12 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
+        <i data-lucide="log-out" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-base font-black text-slate-900">로그아웃 하시겠습니까?</h3>
+      <p class="text-xs text-slate-500 mt-1 mb-5">현재 계정의 서재 세션을 안전하게 종료하고 로그인 화면으로 이동합니다.</p>
+      <div class="flex gap-2">
+        <button type="button" onclick="closeLogoutModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors">
+          취소
+        </button>
+        <button type="button" onclick="confirmLogout()" class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm shadow-rose-600/20">
+          로그아웃
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Config: API Key for Book Search
+    const GOOGLE_BOOKS_API_KEY = "AIzaSyAoHDwXkUIb3FD_gBMbZmrJgoaCD09T8Vg";
+
+    // Safe Storage helper with QuotaExceededError protection
+    function safeSetItem(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (err) {
+        console.warn(`[SafeStorage] Quota error on '${key}'`, err);
+        try {
+          const legacyKeys = ['sjj_books_v30', 'sjj_promises_v30', 'sjj_reviews_v30', 'sjj_points_v30', 'sjj_sns_posts_v31'];
+          legacyKeys.forEach(k => localStorage.removeItem(k));
+          localStorage.setItem(key, value);
+        } catch (retryErr) {
+          console.error(`[SafeStorage] Critical storage limit reached for '${key}':`, retryErr);
+        }
+      }
+    }
+
+    // Client-side Image Compression
+    function compressImage(file, maxWidth, maxHeight, quality, callback) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          callback(compressedDataUrl);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Default system users pool
+    const defaultCommunityUsers = [
+      { id: "usr_guest", username: "guest", password: "123", nickname: "체험 독서가", avatar: "🦉", avatarImg: null, points: 0, stage: "아프리카 대륙", books: [] }
+    ];
+
+    // Load Database from LocalStorage
+    let communityUsers = JSON.parse(localStorage.getItem('sjj_users_v32')) || defaultCommunityUsers;
+
+    // Current Session User State
+    let currentUser = JSON.parse(localStorage.getItem('sjj_current_user_v32')) || null;
+    let tempSignupAvatarImg = null;
+
+    // Per-user Books and Points
+    let books = [];
+    let promises = JSON.parse(localStorage.getItem('sjj_promises_v30')) || [];
+    let reviews = JSON.parse(localStorage.getItem('sjj_reviews_v30')) || [
+      {
+        id: "rev_1",
+        title: "어린 왕자",
+        author: "생각하는 별",
+        rating: 5,
+        ageGroup: "전 학년",
+        tag: "#인생책 #감동 #여우",
+        content: "어른이 되어서도 다시 읽고 싶은 최고의 명작입니다. 여우가 들려준 '마음으로 보아야 보인다'는 말이 아직도 가슴에 맴돌아요.",
+        date: "2026-10-01"
+      },
+      {
+        id: "rev_2",
+        title: "구름빵",
+        author: "책벌레 준우",
+        rating: 5,
+        ageGroup: "초등 저학년 (1~2학년)",
+        tag: "#상상력 #가족사랑 #동화",
+        content: "비 오는 날 고양이 남매가 구름으로 빵을 만들어 먹고 아빠에게 날아가는 장면이 너무 기발하고 따뜻했습니다!",
+        date: "2026-10-03"
+      }
+    ];
+    let userPoints = 0;
+    let currentFilter = 'all';
+    let currentGrade = 'g12';
+    let searchCategory = 'kids';
+    let currentDate = new Date();
+    let html5QrCode = null;
+    let toastTimeout = null;
+
+    // Toast / Snackbar Notification Engine
+    function showToast(message, type = 'info', icon = null) {
+      const container = document.getElementById('toastContainer');
+      const msgEl = document.getElementById('toastMessage');
+      const iconEl = document.getElementById('toastIcon');
+
+      if (toastTimeout) {
+        clearTimeout(toastTimeout);
+        toastTimeout = null;
+      }
+
+      msgEl.textContent = message;
+
+      const themes = {
+        success: { bg: 'bg-emerald-950/90 text-white border-emerald-500/30', defaultIcon: '🎉' },
+        info: { bg: 'bg-slate-900/90 text-white border-indigo-500/30', defaultIcon: '✨' },
+        warning: { bg: 'bg-amber-950/90 text-amber-100 border-amber-500/30', defaultIcon: '⚠️' },
+        error: { bg: 'bg-rose-950/90 text-rose-100 border-rose-500/30', defaultIcon: '🚨' }
+      };
+
+      const selected = themes[type] || themes.info;
+      container.className = `fixed top-5 left-1/2 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md border font-bold text-xs sm:text-sm min-w-[280px] sm:min-w-[340px] max-w-[90vw] justify-between toast-visible ${selected.bg}`;
+      iconEl.textContent = icon || selected.defaultIcon;
+
+      toastTimeout = setTimeout(() => {
+        hideToast();
+      }, 3200);
+    }
+
+    function hideToast() {
+      const container = document.getElementById('toastContainer');
+      container.classList.remove('toast-visible');
+      container.classList.add('toast-hidden');
+    }
+
+    // Auth Gateway System (로그인 / 회원가입)
+    function switchAuthTab(tab) {
+      const loginTab = document.getElementById('authTabLogin');
+      const signupTab = document.getElementById('authTabSignup');
+      const loginForm = document.getElementById('loginForm');
+      const signupForm = document.getElementById('signupForm');
+
+      if (tab === 'login') {
+        loginTab.className = "flex-1 py-2.5 rounded-xl bg-white shadow-xs text-indigo-950 font-black";
+        signupTab.className = "flex-1 py-2.5 rounded-xl text-slate-500";
+        loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+      } else {
+        signupTab.className = "flex-1 py-2.5 rounded-xl bg-white shadow-xs text-indigo-950 font-black";
+        loginTab.className = "flex-1 py-2.5 rounded-xl text-slate-500";
+        signupForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+      }
+    }
+
+    function previewSignupAvatar(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      compressImage(file, 120, 120, 0.7, function(compressedUrl) {
+        tempSignupAvatarImg = compressedUrl;
+        const preview = document.getElementById('signupAvatarPreview');
+        preview.innerHTML = `<img src="${tempSignupAvatarImg}" class="w-full h-full object-cover">`;
+      });
+    }
+
+    function handleSignup(e) {
+      e.preventDefault();
+      const username = document.getElementById('signupUsername').value.trim().toLowerCase();
+      const nickname = document.getElementById('signupNickname').value.trim();
+      const password = document.getElementById('signupPassword').value.trim();
+
+      if (!username || !nickname || !password) {
+        showToast('모든 필수 정보를 입력해주세요.', 'warning');
+        return;
+      }
+
+      if (communityUsers.some(u => u.username === username)) {
+        showToast('이미 존재하는 아이디입니다. 다른 아이디를 입력해주세요.', 'warning');
+        return;
+      }
+
+      const newUser = {
+        id: "usr_" + Date.now(),
+        username,
+        password,
+        nickname,
+        avatar: "🦉",
+        avatarImg: tempSignupAvatarImg || null,
+        points: 0,
+        stage: "아프리카 대륙",
+        books: []
+      };
+
+      communityUsers.push(newUser);
+      safeSetItem('sjj_users_v32', JSON.stringify(communityUsers));
+
+      currentUser = newUser;
+      safeSetItem('sjj_current_user_v32', JSON.stringify(currentUser));
+
+      loadUserData();
+      document.getElementById('authGate').classList.add('hidden');
+      showToast(`환영합니다, ${nickname}님! 나만의 서재가 생성되었습니다.`, 'success', '🎉');
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+      const password = document.getElementById('loginPassword').value.trim();
+
+      const found = communityUsers.find(u => u.username === username && u.password === password);
+      if (!found) {
+        showToast('아이디 또는 비밀번호가 일치하지 않습니다.', 'error');
+        return;
+      }
+
+      currentUser = found;
+      safeSetItem('sjj_current_user_v32', JSON.stringify(currentUser));
+
+      loadUserData();
+      document.getElementById('authGate').classList.add('hidden');
+      showToast(`반가워요, ${currentUser.nickname}님! 서재에 입장했습니다.`, 'success', '📚');
+    }
+
+    function handleLogout() {
+      if (confirm('로그아웃하고 로그인 화면으로 이동하시겠습니까?')) {
+        currentUser = null;
+        localStorage.removeItem('sjj_current_user_v32');
+        document.getElementById('authGate').classList.remove('hidden');
+        switchAuthTab('login');
+        showToast('안전하게 로그아웃되었습니다.', 'info');
+      }
+    }
+
+    function loadUserData() {
+      if (!currentUser) return;
+      books = currentUser.books || [];
+      userPoints = currentUser.points || 0;
+
+      updateUserProfileDisplay();
+      updateUserStats();
+      renderBooks();
+      renderReviews();
+      renderReadingTree();
+      lucide.createIcons();
+    }
+
+    function updateUserProfileDisplay() {
+      if (!currentUser) return;
+
+      const avatarHtml = currentUser.avatarImg 
+        ? `<img src="${currentUser.avatarImg}" class="w-full h-full object-cover">` 
+        : `<span>${currentUser.avatar || '👤'}</span>`;
+
+      // Header Avatar
+      document.getElementById('headerUserAvatar').innerHTML = avatarHtml;
+
+      // Drawer Profile
+      document.getElementById('drawerUserAvatar').innerHTML = avatarHtml;
+      document.getElementById('drawerUserNickname').textContent = currentUser.nickname;
+      document.getElementById('drawerUserHandle').textContent = `@${currentUser.username}`;
+
+      // Profile Modal
+      document.getElementById('profileModalAvatar').innerHTML = avatarHtml;
+      document.getElementById('profileModalNickname').textContent = currentUser.nickname;
+      document.getElementById('profileModalHandle').textContent = `@${currentUser.username}`;
+      document.getElementById('profileModalPoints').textContent = `${currentUser.points} P`;
+      document.getElementById('profileModalCompletedCount').textContent = `${books.filter(b => b.status === 'completed').length}권`;
+    }
+
+    function openProfileModal() {
+      updateUserProfileDisplay();
+      document.getElementById('profileModal').classList.remove('hidden');
+    }
+
+    function closeProfileModal() {
+      document.getElementById('profileModal').classList.add('hidden');
+    }
+
+    // Logout Modal Handlers
+    function handleLogout() {
+      closeSidebar();
+      document.getElementById('logoutModal').classList.remove('hidden');
+    }
+
+    function closeLogoutModal() {
+      document.getElementById('logoutModal').classList.add('hidden');
+    }
+
+    function confirmLogout() {
+      currentUser = null;
+      localStorage.removeItem('sjj_current_user_v32');
+      closeLogoutModal();
+
+      // 로그인 화면 활성화 및 초기화
+      document.getElementById('authGate').classList.remove('hidden');
+      switchAuthTab('login');
+      document.getElementById('loginUsername').value = '';
+      document.getElementById('loginPassword').value = '';
+      
+      // 서재 데이터 화면 리셋
+      books = [];
+      userPoints = 0;
+      renderBooks();
+      renderReadingTree();
+      
+      showToast('안전하게 로그아웃되었습니다.', 'info', '👋');
+    }
+
+    function handleProfilePhotoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      compressImage(file, 140, 140, 0.7, function(compressedUrl) {
+        currentUser.avatarImg = compressedUrl;
+        syncCurrentUser();
+        updateUserProfileDisplay();
+        showToast('프로필 사진이 성공적으로 변경되었습니다!', 'success', '📸');
+      });
+    }
+
+    function selectPresetAvatar(emoji) {
+      currentUser.avatarImg = null;
+      currentUser.avatar = emoji;
+      syncCurrentUser();
+      updateUserProfileDisplay();
+      showToast(`프로필 캐릭터가 '${emoji}'로 변경되었습니다!`, 'success');
+    }
+
+    function syncCurrentUser() {
+      if (!currentUser) return;
+      currentUser.books = books;
+      currentUser.points = userPoints;
+      safeSetItem('sjj_current_user_v32', JSON.stringify(currentUser));
+
+      const idx = communityUsers.findIndex(u => u.id === currentUser.id);
+      if (idx !== -1) {
+        communityUsers[idx] = currentUser;
+        safeSetItem('sjj_users_v32', JSON.stringify(communityUsers));
+      }
+    }
+
+    // 1000P Continent Exploration Levels System
+    const continentStages = [
+      { min: 0, max: 999, name: "아프리카 대륙", icon: "🌍", desc: "독서 탐험의 출발지" },
+      { min: 1000, max: 1999, name: "아시아 대륙", icon: "🌏", desc: "지혜와 역사의 대륙" },
+      { min: 2000, max: 2999, name: "유럽 대륙", icon: "🏰", desc: "고전 명작과 예술의 대륙" },
+      { min: 3000, max: 3999, name: "아메리카 대륙", icon: "🗽", desc: "모험과 도전의 대륙" },
+      { min: 4000, max: 4999, name: "오세아니아 신비섬", icon: "🏝️", desc: "푸른 바다의 보물섬" },
+      { min: 5000, max: 5999, name: "남극 얼음섬", icon: "❄️", desc: "극한의 독서 탐험가" },
+      { min: 6000, max: 999999, name: "전설의 아틀란티스", icon: "🏛️", desc: "전설의 독서 제왕" }
+    ];
+
+    // 32 Master Candidates for Book World Cup
+    const masterWorldCupCandidates = [
+      { id: 1, title: "어린 왕자", author: "생텍쥐페리", icon: "👑", tag: "세계 명작", desc: "가장 중요한 것은 눈에 보이지 않고 마음으로 보아야 한다는 진리" },
+      { id: 2, title: "구름빵", author: "백희나", icon: "☁️", tag: "그림책", desc: "비 오는 날 뭉게구름으로 만든 따뜻한 빵과 하늘을 나는 가족 사랑" },
+      { id: 3, title: "알사탕", author: "백희나", icon: "🍬", tag: "창작 동화", desc: "신비한 알사탕을 먹고 사물과 아빠, 강아지의 진심을 듣는 마법" },
+      { id: 4, title: "강아지 똥", author: "권정생", icon: "🐕", tag: "감동 명작", desc: "민들레 꽃을 피우기 위해 스스로 거름이 된 세상에서 가장 아름다운 존재" },
+      { id: 5, title: "마당을 나온 암탉", author: "황선미", icon: "🐔", tag: "성장 소설", desc: "양계장을 탈출해 야생에서 초록머리를 키워낸 잎싹의 위대한 모성애" },
+      { id: 6, title: "자전거 도둑", author: "박완서", icon: "🚲", tag: "한국 명작", desc: "상계동과 청계천을 배경으로 양심과 도덕적 순수함을 묻는 울림" },
+      { id: 7, title: "샬롯의 거미줄", author: "E.B. 화이트", icon: "🕸️", tag: "세계 명작", desc: "새끼 돼지 윌버를 살리기 위해 기적의 글자를 짠 거미 샬롯의 우정" },
+      { id: 8, title: "원더 (Wonder)", author: "R.J. 팔라시오", icon: "🌟", tag: "성장 소설", desc: "남들과 다른 얼굴을 가졌지만 편견을 딛고 세상을 감동시킨 소년" },
+      { id: 9, title: "삼국지", author: "나관중", icon: "⚔️", tag: "역사 고전", desc: "유비, 관우, 장비의 도원결의와 제갈량의 지혜가 번뜩이는 대서사시" },
+      { id: 10, title: "해리 포터와 마법사의 돌", author: "J.K. 롤링", icon: "🧙‍♂️", tag: "판타지", desc: "호그와트 마법학교로 초대받은 소년 해리 포터의 눈부신 모험" },
+      { id: 11, title: "장수탕 선녀님", author: "백희나", icon: "♨️", tag: "그림책", desc: "오래된 동네 목욕탕 냉탕에서 만난 날개옷 잃어버린 유쾌한 선녀 할머니" },
+      { id: 12, title: "만복이네 떡집", author: "김리리", icon: "🍡", tag: "창작 동화", desc: "달콤한 떡을 먹을 때마다 따뜻한 말과 고운 마음씨가 샘솟는 마법 떡집" },
+      { id: 13, title: "푸른 사자 와니니", author: "이현", icon: "🦁", tag: "동물 모험", desc: "무리에서 쫓겨났지만 아프리카 초원에서 스스로 우뚝 선 암사자 와니니" },
+      { id: 14, title: "아몬드", author: "손원평", icon: "🌰", tag: "청소년 소설", desc: "감정을 느끼지 못하는 괴물 소년 윤재와 상처 입은 곤이의 깊은 우정" },
+      { id: 15, title: "시간을 파는 상점", author: "김선영", icon: "⏳", tag: "청소년 소설", desc: "인터넷 카페에서 특별한 시간 거래 의뢰를 해결하며 배우는 삶의 가치" },
+      { id: 16, title: "정재승의 인간 탐구 보고서", author: "정재승", icon: "🧠", tag: "과학 교양", desc: "외계인의 시각으로 들여다보는 지구인들의 신비한 뇌와 마음의 비밀" },
+      { id: 17, title: "The Very Hungry Caterpillar", author: "에릭 칼", icon: "🐛", tag: "영어 원서", desc: "요일마다 맛있는 음식을 먹고 아름다운 나비로 날아오른 애벌레" },
+      { id: 18, title: "피터 팬", author: "J.M. 배리", icon: "🧚‍♂️", tag: "세계 명작", desc: "어른이 되지 않는 아이 피터 팬과 웬디가 네버랜드로 날아간 환상 여행" },
+      { id: 19, title: "이상한 나라의 앨리스", author: "루이스 캐럴", icon: "🐇", tag: "판타지 고전", desc: "시계를 든 흰 토끼를 따라 토끼 굴로 뛰어든 앨리스의 기상천외한 모험" },
+      { id: 20, title: "찰리와 초콜릿 공장", author: "로알드 달", icon: "🍫", tag: "세계 명작", desc: "황금 티켓을 얻어 윌리 웡카의 환상적인 비밀 초콜릿 공장에 들어간 소년" },
+      { id: 21, title: "마틸다", author: "로알드 달", icon: "📚", tag: "명작 동화", desc: "엄청난 독서광이자 초능력을 지닌 작은 천재 소녀 마틸다의 통쾌한 반격" },
+      { id: 22, title: "구덩이 (Holes)", author: "루이스 새커", icon: "🕳️", tag: "미스터리", desc: "소년원에서 매일 구덩이를 파며 과거와 현재의 운명이 얽히는 수작" },
+      { id: 23, title: "기억 전달자 (The Giver)", author: "로이스 로우리", icon: "🕊️", tag: "SF 고전", desc: "고통도 사랑도 없는 완벽한 통제 사회에서 인류의 기억을 전수받는 소년" },
+      { id: 24, title: "소나기", author: "황순원", icon: "🌧️", tag: "한국 단편", desc: "소년과 윤초시네 소녀의 순수하고 가슴 시리도록 아름다운 풋사랑" },
+      { id: 25, title: "별 (Stars)", author: "알퐁스 도데", icon: "✨", tag: "세계 명작", desc: "프로방스 뤼브롱 산골에서 목동이 들려주는 아름다운 밤하늘 별 이야기" },
+      { id: 26, title: "돼지책", author: "앤서니 브라운", icon: "🐷", tag: "가족 그림책", desc: "가족의 희생과 집안일의 가치를 유쾌하고 풍자적으로 깨우쳐주는 명작" },
+      { id: 27, title: "초정리 편지", author: "배유안", icon: "✉️", tag: "역사 동화", desc: "세종대왕이 눈병 치료차 머문 초정리에서 훈민정음을 배우는 소년 장이" },
+      { id: 28, title: "가방 들어주는 아이", author: "고정욱", icon: "🎒", tag: "감동 동화", desc: "다리가 불편한 영택이의 가방을 들어주며 진정한 친구가 되는 석우" },
+      { id: 29, title: "모모 (Momo)", author: "미하엘 엔데", icon: "🐢", tag: "세계 명작", desc: "회색 신사들에게 빼앗긴 사람들의 소중한 시간을 되찾아주는 소녀 모모" },
+      { id: 30, title: "나니아 연대기: 사자, 마녀 그리고 옷장", author: "C.S. 루이스", icon: "🦁", tag: "판타지 고전", desc: "옷장 문을 열자 펼쳐지는 눈 덮인 나니아 세계와 아슬란의 위대한 모험" },
+      { id: 31, title: "아낌없이 주는 나무", author: "셸 실버스타인", icon: "🌳", tag: "철학 그림책", desc: "소년을 위해 밑동까지 아낌없이 내어주는 나무의 끝없는 무조건적 사랑" },
+      { id: 32, title: "몽실 언니", author: "권정생", icon: "👧", tag: "감동 명작", desc: "가난과 전쟁의 소용돌이 속에서도 동생들을 지켜낸 몽실 언니의 따뜻한 품" }
+    ];
+
+    // World Cup Tournament Runtime State
+    let wcCandidates = [];
+    let wcCurrentRound = [];
+    let wcNextRound = [];
+    let wcMatchIndex = 0;
+    let wcTotalMatchesInRound = 0;
+    let wcRoundName = "32강";
+    let wcWinner = null;
+
+    // Daily Curated Quotes Pool
+    const dailyQuotes = [
+      { text: "가장 중요한 것은 눈에 보이지 않아. 마음으로 보아야 분명하게 보인단다.", source: "생텍쥐페리 『어린 왕자』 중" },
+      { text: "책을 읽는다는 것은 또 다른 세상으로 여행을 떠나는 것과 같다.", source: "에밀리 디킨슨" },
+      { text: "비록 작은 구름 한 조각일지라도, 사랑하는 이의 마음에 띄우면 따뜻한 빵이 된다.", source: "백희나 『구름빵』 중" },
+      { text: "아무리 하찮아 보이는 존재라도 누군가에게는 가장 소중한 꽃을 피워내는 거름이 될 수 있다.", source: "권정생 『강아지 똥』 중" },
+      { text: "오늘의 나를 있게 한 것은 우리 마을의 작은 도서관이었다.", source: "빌 게이츠" },
+      { text: "책은 얼어붙은 우리 마음의 바다를 깨뜨리는 도끼여야 한다.", source: "프란츠 카프카" },
+      { text: "남의 마음을 들어줄 수 있는 귀가 생겼을 때, 비로소 진짜 어른이 시작된다.", source: "백희나 『알사탕』 중" },
+      { text: "날마다 한 걸음씩 내딛는 작은 독서가 모여 위대한 지혜의 태산을 만든다.", source: "동양 격언" }
+    ];
+
+    // Master Recommendation Pool
+    const masterRecommendPool = {
+      g12: [
+        { title: "구름빵", author: "백희나", lang: "한글책", desc: "사랑하는 가족의 마음을 그린 대표 동화" },
+        { title: "강아지 똥", author: "권정생", lang: "한글책", desc: "생명의 소중함을 깨닫게 해주는 이야기" },
+        { title: "The Very Hungry Caterpillar", author: "Eric Carle", lang: "영어책", desc: "애벌레의 성장과 요일을 배우는 명작 원서" },
+        { title: "Brown Bear, Brown Bear", author: "Bill Martin Jr.", lang: "영어책", desc: "다양한 동물과 색상을 만나는 첫 원서" }
+      ],
+      g34: [
+        { title: "어린 왕자", author: "생텍쥐페리", lang: "한글책", desc: "가장 소중한 것은 눈에 보이지 않는다는 진리" },
+        { title: "자전거 도둑", author: "박완서", lang: "한글책", desc: "양심과 정직함에 대한 깊은 울림" },
+        { title: "Charlotte's Web", author: "E.B. White", lang: "영어책", desc: "돼지 윌버와 거미 샬롯의 우정 이야기" },
+        { title: "Wonder", author: "R.J. Palacio", lang: "영어책", desc: "편견을 넘어선 용기와 감동의 성장 소설" }
+      ],
+      g56: [
+        { title: "삼국지", author: "나관중", lang: "한글책", desc: "영웅들의 지혜와 용기가 숨쉬는 고전" },
+        { title: "정재승의 인간 탐구 보고서", author: "정재승", lang: "한글책", desc: "뇌과학으로 들여다보는 인간 심리" },
+        { title: "The Giver", author: "Lois Lowry", lang: "영어책", desc: "기억을 전달받는 소년 어거스트 이야기" },
+        { title: "Harry Potter", author: "J.K. Rowling", lang: "영어책", desc: "마법 세계로 떠나는 환상적인 모험" }
+      ]
+    };
+
+    function init() {
+      if (!currentUser) {
+        document.getElementById('authGate').classList.remove('hidden');
+      } else {
+        document.getElementById('authGate').classList.add('hidden');
+        loadUserData();
+      }
+
+      renderDailyQuote();
+      lucide.createIcons();
+    }
+
+    // Smooth Sidebar Drawer Functions
+    function openSidebar() {
+      const drawer = document.getElementById('sidebarDrawer');
+      const backdrop = document.getElementById('drawerBackdrop');
+      backdrop.classList.remove('hidden');
+      setTimeout(() => {
+        backdrop.classList.remove('opacity-0');
+        drawer.classList.remove('-translate-x-full');
+      }, 10);
+    }
+
+    function closeSidebar() {
+      const drawer = document.getElementById('sidebarDrawer');
+      const backdrop = document.getElementById('drawerBackdrop');
+      drawer.classList.add('-translate-x-full');
+      backdrop.classList.add('opacity-0');
+      setTimeout(() => {
+        backdrop.classList.add('hidden');
+      }, 350);
+    }
+
+    function navSelect(viewName) {
+      closeSidebar();
+      switchView(viewName);
+    }
+
+    function switchView(viewName) {
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('#sidebarDrawer nav button').forEach(b => {
+        b.className = "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-slate-700 hover:bg-indigo-50/60 hover:text-indigo-600";
+      });
+
+      const targetView = document.getElementById(`view-${viewName}`);
+      if (targetView) targetView.classList.remove('hidden');
+
+      const activeNavBtn = document.getElementById(`side-nav-${viewName}`);
+      if (activeNavBtn) {
+        activeNavBtn.className = "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all bg-indigo-600 text-white shadow-md shadow-indigo-600/20";
+      }
+
+      if (viewName === 'tree') renderReadingTree();
+      if (viewName === 'calendar') renderCalendar();
+      if (viewName === 'stats') renderStats();
+      if (viewName === 'promise') renderPromises();
+      if (viewName === 'recommend') renderWeeklyRecommendations();
+      if (viewName === 'reviews') renderReviews();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderReadingTree() {
+      const container = document.getElementById('treeFruitsLayer');
+      const emptyNotice = document.getElementById('treeEmptyNotice');
+      const badge = document.getElementById('treeStatsBadge');
+      const navBadge = document.getElementById('navTreeCountBadge');
+      
+      const completedBooks = books.filter(b => b.status === 'completed');
+      
+      if (badge) badge.textContent = `완독 열매 ${completedBooks.length}송이`;
+      if (navBadge) navBadge.textContent = `${completedBooks.length}열매`;
+
+      if (completedBooks.length === 0) {
+        emptyNotice.classList.remove('hidden');
+        container.innerHTML = '';
+        return;
+      }
+
+      emptyNotice.classList.add('hidden');
+      container.innerHTML = '';
+
+      const branchSlots = [
+        { x: 38, y: 15 }, { x: 52, y: 18 }, { x: 28, y: 28 }, { x: 62, y: 26 },
+        { x: 45, y: 32 }, { x: 34, y: 42 }, { x: 58, y: 40 }, { x: 22, y: 48 },
+        { x: 68, y: 46 }, { x: 42, y: 52 }, { x: 50, y: 58 }, { x: 30, y: 62 },
+        { x: 64, y: 60 }, { x: 18, y: 35 }, { x: 74, y: 34 }, { x: 48, y: 24 }
+      ];
+
+      completedBooks.forEach((book, index) => {
+        const slot = branchSlots[index % branchSlots.length];
+        const jitterX = ((index * 7) % 7) - 3;
+        const jitterY = ((index * 5) % 7) - 3;
+        const posX = Math.max(12, Math.min(84, slot.x + jitterX));
+        const posY = Math.max(12, Math.min(72, slot.y + jitterY));
+
+        const fruitEl = document.createElement('div');
+        fruitEl.className = 'tree-fruit absolute cursor-pointer flex flex-col items-center transition-all duration-300';
+        fruitEl.style.left = `${posX}%`;
+        fruitEl.style.top = `${posY}%`;
+        fruitEl.style.animationDelay = `${(index * 0.25) % 2}s`;
+        fruitEl.onclick = () => openDetailModal(book.id);
+
+        const colors = [
+          'bg-rose-500 text-white',
+          'bg-amber-500 text-white',
+          'bg-indigo-600 text-white',
+          'bg-emerald-600 text-white',
+          'bg-purple-600 text-white',
+          'bg-teal-500 text-white'
+        ];
+        const colorClass = colors[index % colors.length];
+
+        fruitEl.innerHTML = `
+          <!-- Fruit Branch String -->
+          <div class="w-0.5 h-3.5 bg-emerald-800/70 -mb-0.5"></div>
+          <!-- Little Leaf -->
+          <div class="w-2.5 h-1.5 bg-lime-400 rounded-full rotate-45 -mb-1 shadow-2xs"></div>
+          <!-- Hanging Mini Book Fruit -->
+          <div class="${colorClass} px-2.5 py-1.5 rounded-xl shadow-md border-2 border-white/90 flex items-center gap-1.5 max-w-[125px] transform hover:scale-110 transition-transform">
+            <span class="text-sm select-none">🍎</span>
+            <div class="min-w-0">
+              <p class="text-[10px] font-black leading-tight truncate">${book.title}</p>
+              <p class="text-[8px] opacity-80 truncate">${book.author}</p>
+            </div>
+          </div>
+        `;
+        container.appendChild(fruitEl);
+      });
+    }
+
+    function updateUserStats() {
+      let currentStage = continentStages[0];
+      for (let i = continentStages.length - 1; i >= 0; i--) {
+        if (userPoints >= continentStages[i].min) {
+          currentStage = continentStages[i];
+          break;
+        }
+      }
+      if (userPoints >= 6000) currentStage = continentStages[continentStages.length - 1];
+
+      if (currentUser) {
+        currentUser.stage = currentStage.name;
+        currentUser.points = userPoints;
+      }
+
+      // Update Header
+      document.getElementById('userLevelName').textContent = currentStage.name;
+      document.getElementById('userLevelIcon').textContent = currentStage.icon;
+      document.getElementById('userPoints').textContent = `${userPoints} P`;
+
+      // Update Drawer Card
+      document.getElementById('drawerLevelName').textContent = currentStage.name;
+      document.getElementById('drawerLevelIcon').textContent = currentStage.icon;
+      document.getElementById('drawerPointsBadge').textContent = `${userPoints} P`;
+
+      const stageProgress = userPoints % 1000;
+      const progressPercent = Math.min(100, (stageProgress / 1000) * 100);
+      const pointsToNext = 1000 - stageProgress;
+      
+      const nextDescEl = document.getElementById('drawerNextLevelDesc');
+      if (userPoints >= 6000) {
+        nextDescEl.textContent = "최고 등급 탐험 지역에 도달했습니다!";
+        document.getElementById('drawerLevelProgress').style.width = '100%';
+      } else {
+        nextDescEl.textContent = `다음 대륙까지 ${pointsToNext} P`;
+        document.getElementById('drawerLevelProgress').style.width = `${progressPercent}%`;
+      }
+
+      syncCurrentUser();
+    }
+
+    function resetWorldCup() {
+      document.getElementById('worldcupIntroScreen').classList.remove('hidden');
+      document.getElementById('worldcupMatchScreen').classList.add('hidden');
+      document.getElementById('worldcupWinnerScreen').classList.add('hidden');
+      document.getElementById('worldcupRoundBadge').textContent = "32강 준비 중";
+      document.getElementById('worldcupRoundBadge').className = "px-3.5 py-1.5 rounded-full text-xs font-black bg-amber-500 text-white shadow-2xs";
+    }
+
+    function startWorldCup() {
+      wcCandidates = [...masterWorldCupCandidates].sort(() => Math.random() - 0.5).slice(0, 32);
+      wcCurrentRound = [...wcCandidates];
+      wcNextRound = [];
+      wcMatchIndex = 0;
+      wcRoundName = "32강";
+      wcTotalMatchesInRound = wcCurrentRound.length / 2;
+
+      document.getElementById('worldcupIntroScreen').classList.add('hidden');
+      document.getElementById('worldcupWinnerScreen').classList.add('hidden');
+      document.getElementById('worldcupMatchScreen').classList.remove('hidden');
+
+      renderWorldCupMatch();
+    }
+
+    function renderWorldCupMatch() {
+      const totalInRound = wcCurrentRound.length / 2;
+      const currentMatchNum = wcMatchIndex + 1;
+      
+      document.getElementById('worldcupRoundBadge').textContent = `${wcRoundName} (${currentMatchNum}/${totalInRound})`;
+      document.getElementById('worldcupMatchInfo').textContent = `${wcRoundName} ${currentMatchNum} / ${totalInRound} 매치`;
+
+      const totalPlayed = (32 - wcCurrentRound.length) + (wcMatchIndex * 2);
+      const progressPercent = Math.min(100, Math.round((totalPlayed / 31) * 100));
+      document.getElementById('worldcupProgressText').textContent = `진행률 ${progressPercent}%`;
+      document.getElementById('worldcupProgressBar').style.width = `${progressPercent}%`;
+
+      const bookA = wcCurrentRound[wcMatchIndex * 2];
+      const bookB = wcCurrentRound[wcMatchIndex * 2 + 1];
+
+      document.getElementById('wcLeftIcon').textContent = bookA.icon;
+      document.getElementById('wcLeftTitle').textContent = bookA.title;
+      document.getElementById('wcLeftAuthor').textContent = `${bookA.author} 저`;
+      document.getElementById('wcLeftTag').textContent = bookA.tag;
+      document.getElementById('wcLeftDesc').textContent = bookA.desc;
+
+      document.getElementById('wcRightIcon').textContent = bookB.icon;
+      document.getElementById('wcRightTitle').textContent = bookB.title;
+      document.getElementById('wcRightAuthor').textContent = `${bookB.author} 저`;
+      document.getElementById('wcRightTag').textContent = bookB.tag;
+      document.getElementById('wcRightDesc').textContent = bookB.desc;
+    }
+
+    function selectWorldCupWinner(candidateOffset) {
+      const selected = wcCurrentRound[wcMatchIndex * 2 + candidateOffset];
+      wcNextRound.push(selected);
+      wcMatchIndex++;
+
+      const totalMatches = wcCurrentRound.length / 2;
+      if (wcMatchIndex < totalMatches) {
+        renderWorldCupMatch();
+      } else {
+        if (wcNextRound.length === 1) {
+          showWorldCupWinner(wcNextRound[0]);
+        } else {
+          wcCurrentRound = [...wcNextRound];
+          wcNextRound = [];
+          wcMatchIndex = 0;
+          if (wcCurrentRound.length === 16) wcRoundName = "16강";
+          else if (wcCurrentRound.length === 8) wcRoundName = "8강";
+          else if (wcCurrentRound.length === 4) wcRoundName = "4강 준결승";
+          else if (wcCurrentRound.length === 2) wcRoundName = "결승전 (FINAL)";
+
+          renderWorldCupMatch();
+        }
+      }
+    }
+
+    function showWorldCupWinner(winnerBook) {
+      wcWinner = winnerBook;
+      userPoints += 5;
+      updateUserStats();
+
+      document.getElementById('worldcupMatchScreen').classList.add('hidden');
+      document.getElementById('worldcupWinnerScreen').classList.remove('hidden');
+      document.getElementById('worldcupRoundBadge').textContent = "우승 선정 완료 🏆";
+      document.getElementById('worldcupRoundBadge').className = "px-3.5 py-1.5 rounded-full text-xs font-black bg-emerald-600 text-white shadow-2xs";
+
+      document.getElementById('wcWinnerIcon').textContent = winnerBook.icon;
+      document.getElementById('wcWinnerTitle').textContent = winnerBook.title;
+      document.getElementById('wcWinnerAuthor').textContent = `${winnerBook.author} 저`;
+      document.getElementById('wcWinnerDesc').textContent = `"${winnerBook.desc}"`;
+      showToast(`🏆 '${winnerBook.title}' 우승! 독서 보너스 +5 P 획득!`, 'success', '👑');
+      lucide.createIcons();
+    }
+
+    function addWorldCupWinnerToLibrary() {
+      if (!wcWinner) return;
+      openModalManual();
+      document.getElementById('title').value = wcWinner.title;
+      document.getElementById('author').value = wcWinner.author;
+      document.getElementById('notes').value = `[책 월드컵 32선 1위 우승작]\n${wcWinner.desc}\n내가 뽑은 최고의 인생 명작!`;
+    }
+
+    function scrollToReviewForm() {
+      switchView('reviews');
+      const formEl = document.getElementById('reviewFormCard');
+      formEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('reviewBookTitle').focus();
+    }
+
+    function submitBookReview(e) {
+      e.preventDefault();
+      const title = document.getElementById('reviewBookTitle').value.trim();
+      const author = document.getElementById('reviewAuthor').value.trim();
+      const rating = parseInt(document.getElementById('reviewRating').value);
+      const ageGroup = document.getElementById('reviewAgeGroup').value;
+      const tag = document.getElementById('reviewTag').value.trim();
+      const content = document.getElementById('reviewContent').value.trim();
+
+      const newReview = {
+        id: "rev_" + Date.now(),
+        title,
+        author,
+        rating,
+        ageGroup,
+        tag: tag || "#추천도서",
+        content,
+        date: new Date().toISOString().split('T')[0]
+      };
+
+      reviews.unshift(newReview);
+      localStorage.setItem('sjj_reviews_v30', JSON.stringify(reviews));
+
+      userPoints += 3;
+      updateUserStats();
+
+      document.getElementById('reviewBookTitle').value = '';
+      document.getElementById('reviewAuthor').value = '';
+      document.getElementById('reviewTag').value = '';
+      document.getElementById('reviewContent').value = '';
+
+      renderReviews();
+      showToast(`🎉 책 후기 등록 완료! 독서 후기 보너스 +3 P 지급!`, 'success');
+    }
+
+    function renderReviews() {
+      const container = document.getElementById('reviewsContainer');
+      const emptyEl = document.getElementById('emptyReviews');
+      const keyword = (document.getElementById('reviewSearchInput')?.value || '').toLowerCase().trim();
+
+      const filtered = reviews.filter(r => {
+        return !keyword || 
+          r.title.toLowerCase().includes(keyword) || 
+          r.author.toLowerCase().includes(keyword) || 
+          r.content.toLowerCase().includes(keyword);
+      });
+
+      document.getElementById('reviewCountBadge').textContent = filtered.length;
+      const navBadge = document.getElementById('navReviewCountBadge');
+      if (navBadge) navBadge.textContent = `${reviews.length}개`;
+
+      container.innerHTML = '';
+      if (filtered.length === 0) {
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+      filtered.forEach(rev => {
+        const item = document.createElement('div');
+        item.className = 'bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-sm transition-all space-y-2.5';
+        
+        const stars = '★'.repeat(rev.rating) + '☆'.repeat(5 - rev.rating);
+
+        item.innerHTML = `
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-indigo-900 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">${rev.title}</span>
+                <span class="text-[11px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">${rev.ageGroup}</span>
+              </div>
+              <h4 class="text-xs font-bold text-slate-500 mt-1">작성자: <span class="text-slate-800 font-extrabold">${rev.author}</span> · ${rev.date}</h4>
+            </div>
+            <div class="text-amber-400 text-sm tracking-wider font-black">${stars}</div>
+          </div>
+          <p class="text-xs text-slate-700 leading-relaxed font-medium bg-slate-50/70 p-3 rounded-xl border border-slate-100 whitespace-pre-line">${rev.content}</p>
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-[11px] font-bold text-purple-600">${rev.tag}</span>
+            <button onclick="deleteReview('${rev.id}')" class="text-[11px] font-bold text-rose-500 hover:text-rose-700 p-1">삭제</button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function deleteReview(id) {
+      if (confirm('이 후기를 삭제하시겠습니까?')) {
+        reviews = reviews.filter(r => r.id !== id);
+        localStorage.setItem('sjj_reviews_v30', JSON.stringify(reviews));
+        renderReviews();
+      }
+    }
+
+    function renderDailyQuote(forceRandom = false) {
+      const now = new Date();
+      let index = (now.getFullYear() * 365 + now.getMonth() * 31 + now.getDate()) % dailyQuotes.length;
+      if (forceRandom) {
+        index = Math.floor(Math.random() * dailyQuotes.length);
+      }
+      const quote = dailyQuotes[index];
+      document.getElementById('dailyQuoteText').textContent = `"${quote.text}"`;
+      document.getElementById('dailyQuoteSource').textContent = quote.source;
+      document.getElementById('dailyQuoteDate').textContent = `${now.getMonth() + 1}월 ${now.getDate()}일 오늘의 글귀`;
+    }
+
+    function filterStatus(status) {
+      currentFilter = status;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('bg-white', 'shadow-xs', 'text-indigo-900'));
+      document.getElementById(`tab-${status}`).classList.add('bg-white', 'shadow-xs', 'text-indigo-900');
+      renderBooks();
+    }
+
+    function renderBooks() {
+      const grid = document.getElementById('bookGrid');
+      const emptyState = document.getElementById('emptyState');
+      const searchKeyword = document.getElementById('searchInput').value.toLowerCase().trim();
+
+      const filtered = books.filter(book => {
+        const matchesFilter = currentFilter === 'all' || book.status === currentFilter;
+        const matchesSearch = !searchKeyword || 
+          book.title.toLowerCase().includes(searchKeyword) || 
+          book.author.toLowerCase().includes(searchKeyword);
+        return matchesFilter && matchesSearch;
+      });
+
+      grid.innerHTML = '';
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+        filtered.forEach(book => grid.appendChild(createBookCard(book)));
+      }
+      lucide.createIcons();
+    }
+
+    function createBookCard(book) {
+      const card = document.createElement('div');
+      card.className = 'bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs hover:shadow-md transition-all cursor-pointer flex gap-4 items-start';
+      card.onclick = () => openDetailModal(book.id);
+
+      const statusMap = {
+        reading: { label: '📖 읽는 중', class: 'bg-blue-50 text-blue-700 border-blue-200' },
+        completed: { label: '✅ 완독 (+5P)', class: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+        wish: { label: '⭐ 읽고 싶음', class: 'bg-amber-50 text-amber-700 border-amber-200' }
+      };
+
+      const stars = '★'.repeat(book.rating) + '☆'.repeat(5 - book.rating);
+      
+      const coverHtml = book.coverUrl 
+        ? `<img src="${book.coverUrl}" referrerpolicy="no-referrer" class="w-16 h-24 object-cover rounded-xl shadow-xs flex-shrink-0 border border-slate-100">`
+        : `<div class="w-16 h-24 ${book.coverBg || 'bg-indigo-600'} rounded-xl shadow-xs flex flex-col justify-between p-2 text-white text-[10px] font-bold flex-shrink-0">
+            <span class="opacity-75">SJJ BOOKS</span>
+            <p class="line-clamp-2 leading-tight">${book.title}</p>
+           </div>`;
+
+      card.innerHTML = `
+        ${coverHtml}
+        <div class="flex-1 min-w-0 flex flex-col justify-between h-24">
+          <div>
+            <span class="text-[10px] px-2 py-0.5 rounded-full border ${statusMap[book.status].class} font-bold">${statusMap[book.status].label}</span>
+            <h3 class="font-extrabold text-slate-900 text-sm truncate mt-1">${book.title}</h3>
+            <p class="text-xs text-slate-500 truncate">${book.author}</p>
+          </div>
+          <div>
+            <div class="text-amber-400 text-xs tracking-wider">${stars}</div>
+            <p class="text-[10px] text-slate-400 truncate">${book.readDate || '날짜 미지정'}</p>
+          </div>
+        </div>
+      `;
+      return card;
+    }
+
+    function setSearchFilter(type) {
+      searchCategory = type;
+      if (type === 'kids') {
+        document.getElementById('filterKidsBtn').className = "px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-indigo-600 text-white transition-all shadow-xs";
+        document.getElementById('filterAllBtn').className = "px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all";
+        document.getElementById('apiQuery').placeholder = "어린이 동화, 그림책, 저자, ISBN 검색...";
+      } else {
+        document.getElementById('filterAllBtn').className = "px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-indigo-600 text-white transition-all shadow-xs";
+        document.getElementById('filterKidsBtn').className = "px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all";
+        document.getElementById('apiQuery').placeholder = "전 세계 모든 도서 제목, 저자, ISBN 검색...";
+      }
+      if (document.getElementById('apiQuery').value.trim()) {
+        searchKoreanAndEnglishBooks();
+      }
+    }
+
+    async function searchKoreanAndEnglishBooks(e) {
+      if (e) e.preventDefault();
+      const rawQuery = document.getElementById('apiQuery').value.trim();
+      const resultsContainer = document.getElementById('searchResults');
+      resultsContainer.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">출판 도서 데이터베이스에서 검색 중입니다...</div>';
+
+      try {
+        let finalQuery = rawQuery;
+        if (searchCategory === 'kids') {
+          if (!/^[0-9X\-]+$/i.test(rawQuery) && !rawQuery.includes('어린이') && !rawQuery.includes('동화')) {
+            finalQuery = `${rawQuery} (어린이 OR 동화 OR 그림책 OR juvenile OR children)`;
+          }
+        }
+
+        const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(finalQuery)}&maxResults=20&key=${GOOGLE_BOOKS_API_KEY}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!data.items || data.items.length === 0) {
+          resultsContainer.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">검색 결과가 없습니다. 다른 검색어를 입력해주세요.</div>';
+          return;
+        }
+
+        resultsContainer.innerHTML = '';
+        const uniqueTitles = new Set();
+
+        data.items.forEach(item => {
+          const info = item.volumeInfo;
+          const title = info.title || '제목 없음';
+          if (uniqueTitles.has(title)) return;
+          uniqueTitles.add(title);
+
+          const author = info.authors ? info.authors.join(', ') : (info.publisher || '저자 미상');
+          let coverUrl = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
+          if (coverUrl) coverUrl = coverUrl.replace('http://', 'https://');
+
+          const itemEl = document.createElement('div');
+          itemEl.className = 'flex items-center gap-3 p-3 border border-slate-100 rounded-2xl hover:bg-indigo-50/30 transition-all';
+          
+          const coverImgHtml = coverUrl 
+            ? `<img src="${coverUrl}" referrerpolicy="no-referrer" class="w-12 h-16 object-cover rounded-lg flex-shrink-0 border border-slate-100">`
+            : `<div class="w-12 h-16 bg-indigo-600 rounded-lg flex items-center justify-center text-[10px] text-white font-bold flex-shrink-0 text-center p-1">표지없음</div>`;
+
+          itemEl.innerHTML = `
+            ${coverImgHtml}
+            <div class="flex-1 min-w-0">
+              <h4 class="text-sm font-bold text-slate-900 truncate">${title}</h4>
+              <p class="text-xs text-slate-500 truncate">${author}</p>
+              <span class="text-[9px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-bold mt-1 inline-block">${searchCategory === 'kids' ? '어린이 도서' : '출판 도서'}</span>
+            </div>
+            <button onclick="selectBookFromApi('${title.replace(/'/g, "\\'")}', '${author.replace(/'/g, "\\'")}', '${coverUrl}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl flex-shrink-0 transition-colors">선택</button>
+          `;
+          resultsContainer.appendChild(itemEl);
+        });
+
+      } catch (err) {
+        console.error(err);
+        resultsContainer.innerHTML = '<div class="text-center py-12 text-rose-500 text-sm">도서 정보를 불러오는 도중 오류가 발생했습니다.</div>';
+      }
+    }
+
+    // Barcode Scanner Logic
+    async function openScanModal() {
+      document.getElementById('scanModal').classList.remove('hidden');
+      const readerContainer = document.getElementById('scannerReader');
+      readerContainer.innerHTML = '카메라 연결 준비 중...';
+
+      if (html5QrCode) {
+        try { await html5QrCode.stop(); } catch(e){}
+        try { html5QrCode.clear(); } catch(e){}
+        html5QrCode = null;
+      }
+
+      try {
+        html5QrCode = new Html5Qrcode("scannerReader");
+        const config = { fps: 15, qrbox: { width: 280, height: 160 } };
+        
+        try {
+          await html5QrCode.start({ facingMode: "environment" }, config, onBarcodeScanned);
+        } catch (e1) {
+          const cameras = await Html5Qrcode.getCameras();
+          if (cameras && cameras.length > 0) {
+            await html5QrCode.start(cameras[cameras.length - 1].id, config, onBarcodeScanned);
+          } else {
+            throw e1;
+          }
+        }
+      } catch (err) {
+        console.error("Camera access error:", err);
+        readerContainer.innerHTML = `<div class="p-4 text-center"><p class="text-rose-400 font-bold mb-1">카메라 권한을 얻을 수 없습니다.</p><p class="text-[11px] text-slate-400">아래 입력창에 바코드(ISBN) 번호를 직접 입력해주세요.</p></div>`;
+      }
+    }
+
+    async function onBarcodeScanned(decodedText) {
+      await closeScanModal();
+      const cleanIsbn = decodedText.replace(/[^0-9X]/gi, '');
+      openSearchModal();
+      document.getElementById('apiQuery').value = cleanIsbn;
+      await searchKoreanAndEnglishBooks();
+    }
+
+    function submitManualIsbn() {
+      const isbn = document.getElementById('manualIsbnInput').value.trim();
+      if (!isbn) {
+        showToast('ISBN 번호를 입력해주세요.', 'warning');
+        return;
+      }
+      closeScanModal();
+      openSearchModal();
+      document.getElementById('apiQuery').value = isbn;
+      searchKoreanAndEnglishBooks();
+    }
+
+    async function closeScanModal() {
+      if (html5QrCode) {
+        try { await html5QrCode.stop(); } catch(e) {}
+        try { html5QrCode.clear(); } catch(e) {}
+        html5QrCode = null;
+      }
+      document.getElementById('scanModal').classList.add('hidden');
+    }
+
+    function openSearchModal() { document.getElementById('searchModal').classList.remove('hidden'); }
+    function closeSearchModal() { document.getElementById('searchModal').classList.add('hidden'); }
+
+    function selectBookFromApi(title, author, coverUrl) {
+      closeSearchModal();
+      openModalManual();
+      document.getElementById('title').value = title;
+      document.getElementById('author').value = author;
+      document.getElementById('coverUrl').value = coverUrl;
+      if (coverUrl) {
+        document.getElementById('coverPreview').src = coverUrl;
+        document.getElementById('coverPreviewContainer').classList.remove('hidden');
+      }
+    }
+
+    function openModalManual() {
+      document.getElementById('bookForm').reset();
+      document.getElementById('readDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('coverUrl').value = '';
+      document.getElementById('coverPreviewContainer').classList.add('hidden');
+      document.getElementById('aiProofreadDisplay').textContent = "독서록 작성 후 '첨삭 실행' 버튼을 누르면 문장 분석, 교정, 어휘 추천이 실행됩니다.";
+      document.getElementById('bookModal').classList.remove('hidden');
+    }
+
+    function closeModal() { document.getElementById('bookModal').classList.add('hidden'); }
+
+    function addRecommendBookToMyLibrary(title, author) {
+      openModalManual();
+      document.getElementById('title').value = title;
+      document.getElementById('author').value = author;
+      document.getElementById('status').value = 'completed';
+    }
+
+    function runAdvancedAiProofread() {
+      const title = document.getElementById('title').value.trim() || '도서';
+      const rawNotes = document.getElementById('notes').value.trim();
+
+      if (!rawNotes) {
+        showToast('첨삭을 받으려면 독서록 원문을 먼저 작성해 주세요!', 'warning');
+        return;
+      }
+
+      const rawSentences = rawNotes.split(/(?<=[.!?\n])\s+/).filter(s => s.trim().length > 0);
+      const correctionDetails = [];
+      const vocabularySuggestions = [];
+      const structureTips = [];
+      let revisedSentences = [];
+
+      const correctionRules = [
+        { regex: /되게\s*재밌/g, replace: '매우 흥미진진하', note: "'되게 재밌' ➔ '매우 흥미진진하' (구어체를 격식 있는 표현으로 개선)" },
+        { regex: /진짜\s*좋았/g, replace: '정말 깊은 인상을 남겼', note: "'진짜 좋았' ➔ '정말 깊은 인상을 남겼' (단순 감탄을 구체적 감상으로 교정)" },
+        { regex: /넘\s*재밌/g, replace: '무척 흥미로웠', note: "'넘 재밌' ➔ '무척 흥미로웠' (줄임말 바른 표기 개선)" },
+        { regex: /어이\s*없/g, replace: '어처구니없', note: "'어이없다' ➔ '어처구니없다' (올바른 표준어 및 풍부한 표현)" },
+        { regex: /바램/g, replace: '바람', note: "'바램' ➔ '바람' (맞춤법 오류 수정)" },
+        { regex: /됀/g, replace: '된', note: "'됀' ➔ '된' (맞춤법 교정)" },
+        { regex: /됫/g, replace: '됐', note: "'됫' ➔ '됐' (맞춤법 교정)" },
+        { regex: /않돼/g, replace: '안 돼', note: "'않돼' ➔ '안 돼' (부정 부사 띄어쓰기 교정)" },
+        { regex: /할께요/g, replace: '할게요', note: "'할께요' ➔ '할게요' (어미 표기 교정)" },
+        { regex: /어떻해/g, replace: '어떡해', note: "'어떻해' ➔ '어떡해' (맞춤법 교정)" },
+        { regex: /다르다/g, replace: '틀리다', condition: s => s.includes('생각이 틀리다'), fix: s => s.replace('생각이 틀리다', '생각이 다르다'), note: "'틀리다' ➔ '다르다' (다름과 틀림 구별)" },
+
+        {
+          match: /재미?있었다|재밌었다/g,
+          replace: '손에서 책을 놓을 수 없을 만큼 몰입감이 넘쳤다',
+          vocab: "• '재미있었다' ➔ '흥미진진하다', '눈을 뗄 수 없다', '몰입감이 넘치다'"
+        },
+        {
+          match: /좋았다/g,
+          replace: '가슴 깊이 진한 여운과 감동을 전해주었다',
+          vocab: "• '좋았다' ➔ '마음 깊이 와닿다', '깊은 감명을 주다', '생각의 폭을 넓히다'"
+        },
+        {
+          match: /슬펐다/g,
+          replace: '인물의 가슴 아픈 처지에 깊이 공감되어 코끝이 찡해졌다',
+          vocab: "• '슬펐다' ➔ '가슴 뭉클하다', '마음이 미어지다', '깊은 연민을 느끼다'"
+        },
+        {
+          match: /어려웠다/g,
+          replace: '여러 가지 철학적인 의미를 곰곰이 되짚어 보게 만들었다',
+          vocab: "• '어려웠다' ➔ '깊은 사색을 유도하다', '시사하는 바가 크다'"
+        },
+        {
+          match: /놀라웠다/g,
+          replace: '예상을 뛰어넘는 전개로 큰 감탄과 신선함을 안겨주었다',
+          vocab: "• '놀라웠다' ➔ '신선한 충격을 주다', '경이롭다', '눈부신 통찰을 보여주다'"
+        },
+        {
+          match: /나빴다/g,
+          replace: '도덕적으로 비판받아 마땅하며 많은 교훈을 남겼다',
+          vocab: "• '나빴다' ➔ '바람직하지 못하다', '성찰의 계기를 마련하다'"
+        }
+      ];
+
+      rawSentences.forEach((sentence, index) => {
+        let trimmed = sentence.trim();
+        let modified = trimmed;
+
+        correctionRules.forEach(rule => {
+          if (rule.regex && rule.regex.test(modified)) {
+            modified = modified.replace(rule.regex, rule.replace);
+            if (!correctionDetails.includes(rule.note)) correctionDetails.push(rule.note);
+          }
+          if (rule.condition && rule.condition(modified)) {
+            modified = rule.fix(modified);
+            if (!correctionDetails.includes(rule.note)) correctionDetails.push(rule.note);
+          }
+          if (rule.match && rule.match.test(modified)) {
+            modified = modified.replace(rule.match, rule.replace);
+            if (rule.vocab && !vocabularySuggestions.includes(rule.vocab)) {
+              vocabularySuggestions.push(rule.vocab);
+            }
+          }
+        });
+
+        if (!/[.!?]$/.test(modified)) {
+          modified += '.';
+        }
+
+        revisedSentences.push(modified);
+      });
+
+      const wordCount = rawNotes.trim().split(/\s+/).length;
+      if (rawSentences.length <= 1) {
+        structureTips.push("• 전체 글이 한두 문장으로 짧습니다. '줄거리 요약 ➔ 가장 기억에 남는 장면 ➔ 나의 생각과 다짐'의 3단 구성을 갖추면 더욱 훌륭한 독서록이 됩니다.");
+      } else if (rawSentences.length >= 2 && rawSentences.length <= 4) {
+        structureTips.push("• 핵심 내용과 느낌이 고르게 담겨 있습니다. 인물의 선택에 대한 나의 의견이나 현실 경험과 비교하는 문장을 1문장 더 덧붙여 보세요.");
+      } else {
+        structureTips.push("• 풍성한 문장 구성과 적극적인 생각 표현이 돋보입니다. 단락을 적절히 나누어 가독성을 높이면 완벽합니다.");
+      }
+
+      structureTips.push(`• 총 작성 분량: 약 ${wordCount}개 어절 / ${rawSentences.length}개 문장`);
+
+      const thoughtQuestions = [
+        `1. 『${title}』에서 주인공이 마주했던 가장 결정적인 갈등 상황에서, 만약 내가 주인공이었다면 어떤 선택을 내렸을까요?`,
+        `2. 이 책을 읽기 전과 읽은 후를 비교했을 때, 나의 생각이나 세상을 바라보는 시선에 새롭게 변화된 점은 무엇인가요?`
+      ];
+
+      const formattedResult = `✨ [AI 문장 맞춤 교정 결과]
+• 원문:
+"${rawNotes}"
+
+• 교정 및 다듬은 문장:
+"${revisedSentences.join(' ')}"
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🔍 [맞춤법 및 문맥 수정 내역]
+${correctionDetails.length > 0 ? correctionDetails.map(d => `• ${d}`).join('\n') : '• 기초 맞춤법과 띄어쓰기가 전반적으로 훌륭하며 자연스럽습니다.'}
+
+💡 [감상 어휘 고도화 제안]
+${vocabularySuggestions.length > 0 ? vocabularySuggestions.join('\n') : '• 단순한 일상 단어 대신 감정의 깊이를 전하는 어휘(여운, 성찰, 감동, 몰입감)가 잘 활용되었습니다.'}
+
+📐 [문장 구성 및 구조 조언]
+${structureTips.join('\n')}
+
+🎯 [사고력 확장 심화 질문]
+${thoughtQuestions.join('\n')}`;
+
+      const displayEl = document.getElementById('aiProofreadDisplay');
+      displayEl.textContent = formattedResult;
+      document.getElementById('aiProofread').value = formattedResult;
+
+      displayEl.classList.remove('bg-white');
+      displayEl.classList.add('bg-indigo-50/70', 'ring-2', 'ring-indigo-300');
+      showToast('AI 문장 맞춤 첨삭이 완료되었습니다!', 'info', '💡');
+      setTimeout(() => {
+        displayEl.classList.remove('ring-2', 'ring-indigo-300');
+        displayEl.classList.add('bg-white');
+      }, 1200);
+    }
+
+    function saveBook(e) {
+      e.preventDefault();
+      const status = document.getElementById('status').value;
+      const coverBg = document.querySelector('input[name="coverBg"]:checked').value;
+      const title = document.getElementById('title').value;
+
+      const newBook = {
+        id: Date.now().toString(),
+        title,
+        author: document.getElementById('author').value,
+        readDate: document.getElementById('readDate').value,
+        status,
+        rating: parseInt(document.getElementById('rating').value),
+        notes: document.getElementById('notes').value,
+        aiProofread: document.getElementById('aiProofread').value,
+        coverUrl: document.getElementById('coverUrl').value,
+        coverBg,
+        quizCompleted: false
+      };
+
+      if (status === 'completed') {
+        userPoints += 5;
+        showToast(`✅ '${title}' 완독 등록 완료! +5 P 획득!`, 'success');
+      } else {
+        showToast(`📚 '${title}' 서재에 등록되었습니다!`, 'info');
+      }
+
+      books.unshift(newBook);
+      syncCurrentUser();
+      closeModal();
+      updateUserStats();
+      renderBooks();
+      renderReadingTree();
+    }
+
+    function openDetailModal(id) {
+      const book = books.find(b => b.id === id);
+      if (!book) return;
+
+      document.getElementById('detailTitle').textContent = book.title;
+      document.getElementById('detailAuthor').textContent = `${book.author} 저`;
+      document.getElementById('detailStars').textContent = '★'.repeat(book.rating) + '☆'.repeat(5 - book.rating);
+      document.getElementById('detailDate').textContent = `읽은 날짜: ${book.readDate || '미지정'}`;
+      document.getElementById('detailNotes').textContent = book.notes || '작성된 원문이 없습니다.';
+      document.getElementById('detailProofread').textContent = book.aiProofread || '첨삭 결과가 없습니다.';
+
+      const coverContainer = document.getElementById('detailCoverContainer');
+      coverContainer.innerHTML = book.coverUrl 
+        ? `<img src="${book.coverUrl}" referrerpolicy="no-referrer" class="w-16 h-24 object-cover rounded-xl shadow-md border border-slate-100">` 
+        : `<div class="w-16 h-24 ${book.coverBg || 'bg-indigo-600'} rounded-xl text-white font-bold p-2 text-xs flex items-center justify-center text-center shadow-md">${book.title}</div>`;
+
+      document.getElementById('deleteBtn').onclick = () => deleteBook(book.id);
+      document.getElementById('startQuizBtn').onclick = () => startQuiz(book);
+
+      document.getElementById('detailModal').classList.remove('hidden');
+    }
+
+    function closeDetailModal() { document.getElementById('detailModal').classList.add('hidden'); }
+
+    function deleteBook(id) {
+      if (confirm('이 책을 삭제하시겠습니까?')) {
+        books = books.filter(b => b.id !== id);
+        syncCurrentUser();
+        closeDetailModal();
+        renderBooks();
+        renderReadingTree();
+        showToast('도서가 서재에서 삭제되었습니다.', 'info');
+      }
+    }
+
+    function generateRealBookContentExam(book) {
+      const title = book.title;
+      const author = book.author;
+
+      if (title.includes('어린 왕자') || title.includes('어린왕자')) {
+        return [
+          { q: "Q1. 어린 왕자가 자신의 별 소행성 B612에 두고 온 소중한 존재는?", opts: ["장미꽃", "선인장", "사과나무", "튤립"], a: 0 },
+          { q: "Q2. 어린 왕자가 지구에서 만난 여우가 전해준 핵심 교훈은?", opts: ["가장 중요한 것은 눈에 보이지 않는다", "돈이 많아야 행복하다", "지식을 과시하라", "아무도 믿지 마라"], a: 0 },
+          { q: "Q3. 어린 왕자의 소행성을 위협하는 무서운 뿌리를 가진 나무는?", opts: ["바오밥 나무", "소나무", "버드나무", "단풍나무"], a: 0 },
+          { q: "Q4. 비행기 조종사인 화자가 어릴 적 그린 '보아뱀 코끼리'를 어른들은 무엇으로 보았나요?", opts: ["모자", "산", "바위", "상자"], a: 0 },
+          { q: "Q5. 이 명작 '어린 왕자'의 작가는 누구인가요?", opts: [author, "백희나", "셰익스피어", "톨스토이"], a: 0 }
+        ];
+      }
+
+      if (title.includes('구름빵')) {
+        return [
+          { q: "Q1. 비 오는 날 나뭇가지에 걸린 구름을 받아 만들어 먹은 음식은?", opts: ["구름빵", "구름떡", "구름과자", "구름사탕"], a: 0 },
+          { q: "Q2. 구름빵을 먹고 나서 고양이 남매에게 나타난 신기한 현상은?", opts: ["몸이 두둥실 하늘로 떠올랐다", "몸이 거대해졌다", "투명인간이 되었다", "동물과 대화했다"], a: 0 },
+          { q: "Q3. 아침을 굶고 출근한 아빠에게 아이들이 날아가 전해준 것은?", opts: ["구름빵", "우유", "도시락", "우산"], a: 0 },
+          { q: "Q4. 구름빵에서 아빠가 출근길에 늦지 않도록 도운 핵심 매개체는?", opts: ["구름빵을 먹고 하늘을 날아가기", "지하철 타고 가기", "자전거 타고 가기", "뛰어가기"], a: 0 },
+          { q: "Q5. 세계적으로 인정받은 동화책 '구름빵'의 작가는?", opts: [author, "생텍쥐페리", "권정생", "안데르센"], a: 0 }
+        ];
+      }
+
+      return [
+        { q: `Q1. '${title}' 도서의 실제 저자(지은이)로 올바른 사람은?`, opts: [author, "작가 미상", "알 수 없음", "편집자"], a: 0 },
+        { q: `Q2. 본 도서 '${title}'의 주요 스토리 및 주인공의 역할과 부합하는 설명은?`, opts: ["주인공이 고난을 극복하고 성장하는 이야기", "단순히 그림만 나열된 책", "전혀 아무 사건도 없는 이야기", "요리 레시피만 적힌 책"], a: 0 },
+        { q: `Q3. 이 책 '${title}'이 전하고자 하는 핵심 메시지와 가장 가까운 것은?`, opts: ["교훈과 교양, 삶의 지혜", "시간 무성의하게 쓰기", "지식 무시하기", "아무 가치 없음"], a: 0 },
+        { q: `Q4. 본 도서 완독 기록 후 작성된 나만의 독서록 원문의 주요 성격은?`, opts: ["책의 핵심 사건과 나의 솔직한 느낌 정리", "단순 제목만 암기함", "책을 읽지 않고 기록함", "기억 안 남"], a: 0 },
+        { q: `Q5. 본 도서 완독(+5P) 및 퀴즈 시험 만점(+5P) 시 받게 되는 최종 합산 점수는?`, opts: ["10점 만점", "5점", "0점", "1점"], a: 0 }
+      ];
+    }
+
+    function startQuiz(book) {
+      closeDetailModal();
+      document.getElementById('quizContent').classList.remove('hidden');
+      document.getElementById('quizResult').classList.add('hidden');
+      document.getElementById('quizModal').classList.remove('hidden');
+
+      let currentQ = 0;
+      let score = 0;
+      const questions = generateRealBookContentExam(book);
+
+      function showQ() {
+        document.getElementById('quizProgress').textContent = `문제 ${currentQ + 1} / 5`;
+        document.getElementById('quizQuestion').textContent = questions[currentQ].q;
+        const opts = document.getElementById('quizOptions');
+        opts.innerHTML = '';
+
+        questions[currentQ].opts.forEach((opt, idx) => {
+          const btn = document.createElement('button');
+          btn.className = 'w-full text-left p-3.5 border border-slate-200 rounded-2xl text-sm font-bold hover:bg-indigo-50 transition-colors';
+          btn.textContent = opt;
+          btn.onclick = () => {
+            if (idx === questions[currentQ].a) score += 20;
+            currentQ++;
+            if (currentQ < questions.length) showQ();
+            else finishQuiz();
+          };
+          opts.appendChild(btn);
+        });
+      }
+
+      function finishQuiz() {
+        document.getElementById('quizContent').classList.add('hidden');
+        document.getElementById('quizResult').classList.remove('hidden');
+
+        document.getElementById('resultScore').textContent = `최종 시험 점수: ${score} / 100점`;
+
+        if (score === 100) {
+          if (!book.quizCompleted) {
+            userPoints += 5;
+            book.quizCompleted = true;
+            syncCurrentUser();
+            updateUserStats();
+          }
+          document.getElementById('resultEmoji').textContent = '💯';
+          document.getElementById('resultTitle').textContent = '축하합니다! 시험 만점으로 추가 +5P 획득!';
+        } else {
+          document.getElementById('resultEmoji').textContent = '📖';
+          document.getElementById('resultTitle').textContent = '수고하셨습니다! 다시 한번 읽고 도전해보세요.';
+        }
+      }
+
+      showQ();
+    }
+
+    function closeQuizModal() { document.getElementById('quizModal').classList.add('hidden'); }
+
+    function switchGrade(grade) {
+      currentGrade = grade;
+      document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('bg-indigo-600', 'text-white'));
+      document.getElementById(`grade-${grade}`).classList.add('bg-indigo-600', 'text-white');
+      renderWeeklyRecommendations();
+    }
+
+    function renderWeeklyRecommendations() {
+      const container = document.getElementById('recommendBookGrid');
+      const pool = masterRecommendPool[currentGrade] || masterRecommendPool.g12;
+
+      container.innerHTML = '';
+      pool.forEach(b => {
+        const card = document.createElement('div');
+        card.className = 'bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between hover:border-indigo-300 transition-all';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full ${b.lang === '한글책' ? 'bg-indigo-100 text-indigo-700' : 'bg-rose-100 text-rose-700'}">${b.lang}</span>
+              <span class="text-[10px] font-bold text-slate-400">주간 추천</span>
+            </div>
+            <h4 class="font-extrabold text-slate-900 text-sm truncate">${b.title}</h4>
+            <p class="text-xs text-slate-500 font-medium mb-2">${b.author} 저</p>
+            <p class="text-xs text-slate-600 line-clamp-2 leading-snug mb-4">${b.desc}</p>
+          </div>
+          <button onclick="addRecommendBookToMyLibrary('${b.title.replace(/'/g, "\\'")}', '${b.author.replace(/'/g, "\\'")}')" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-colors">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            <span>내 서재에 추가</span>
+          </button>
+        `;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    // Calendar Multi-Book Renderer
+    function renderCalendar() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      document.getElementById('calendarTitle').textContent = `${year}년 ${month + 1}월`;
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const lastDate = new Date(year, month + 1, 0).getDate();
+      const calendarGrid = document.getElementById('calendarGrid');
+      calendarGrid.innerHTML = '';
+
+      for (let i = 0; i < firstDay; i++) { calendarGrid.appendChild(document.createElement('div')); }
+
+      for (let date = 1; date <= lastDate; date++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+        const dayBooks = books.filter(b => b.readDate === dateStr);
+
+        const cell = document.createElement('div');
+        cell.className = 'bg-slate-50 border border-slate-100 rounded-xl p-1 min-h-[70px] text-left flex flex-col gap-1 overflow-y-auto max-h-[100px]';
+        cell.innerHTML = `<span class="text-[10px] font-bold text-slate-400 block mb-0.5">${date}</span>`;
+
+        if (dayBooks.length > 0) {
+          dayBooks.forEach(bookItem => {
+            const badge = document.createElement('div');
+            badge.className = 'text-[9px] bg-indigo-600 text-white font-bold px-1.5 py-0.5 rounded-md truncate cursor-pointer hover:bg-indigo-700 transition-colors shadow-2xs';
+            badge.textContent = bookItem.title;
+            badge.onclick = () => openDetailModal(bookItem.id);
+            cell.appendChild(badge);
+          });
+        }
+        calendarGrid.appendChild(cell);
+      }
+    }
+
+    function changeMonth(delta) { currentDate.setMonth(currentDate.getMonth() + delta); renderCalendar(); }
+
+    function initStatsYear() {
+      const select = document.getElementById('statsYear');
+      const currentYear = new Date().getFullYear();
+      select.innerHTML = `<option value="${currentYear}">${currentYear}년</option>`;
+    }
+
+    function renderStats() {
+      const selectedYear = parseInt(document.getElementById('statsYear').value) || new Date().getFullYear();
+      const completedBooks = books.filter(b => b.status === 'completed' && new Date(b.readDate).getFullYear() === selectedYear);
+
+      document.getElementById('statTotalCompleted').textContent = `${completedBooks.length}권`;
+      document.getElementById('statTotalPoints').textContent = `${userPoints} P`;
+
+      const monthlyCounts = Array(12).fill(0);
+      completedBooks.forEach(b => {
+        const m = new Date(b.readDate).getMonth();
+        if (!isNaN(m)) monthlyCounts[m]++;
+      });
+
+      const maxMonth = monthlyCounts.indexOf(Math.max(...monthlyCounts)) + 1;
+      document.getElementById('statBestMonth').textContent = Math.max(...monthlyCounts) > 0 ? `${maxMonth}월` : '-';
+
+      const barContainer = document.getElementById('statsMonthlyBar');
+      barContainer.innerHTML = '';
+      monthlyCounts.forEach((count, i) => {
+        barContainer.innerHTML += `
+          <div class="flex items-center gap-2 text-xs">
+            <span class="w-8 font-bold text-slate-500">${i + 1}월</span>
+            <div class="flex-1 bg-slate-100 h-4 rounded-full overflow-hidden">
+              <div class="bg-indigo-600 h-full rounded-full" style="width: ${count * 10}%"></div>
+            </div>
+            <span class="w-6 font-bold text-slate-700 text-right">${count}권</span>
+          </div>
+        `;
+      });
+    }
+
+    function openPromiseModal() { document.getElementById('promiseModal').classList.remove('hidden'); }
+    function closePromiseModal() { document.getElementById('promiseModal').classList.add('hidden'); }
+
+    function savePromise(e) {
+      e.preventDefault();
+      promises.push({
+        id: Date.now().toString(),
+        title: document.getElementById('promiseTitle').value,
+        target: parseInt(document.getElementById('promiseTarget').value),
+        claimed: false
+      });
+      localStorage.setItem('sjj_promises_v30', JSON.stringify(promises));
+      closePromiseModal();
+      renderPromises();
+    }
+
+    function renderPromises() {
+      const container = document.getElementById('promiseList');
+      container.innerHTML = '';
+      if (promises.length === 0) {
+        container.innerHTML = '<p class="text-center text-xs text-slate-400 py-8">등록된 약속이 없습니다.</p>';
+        return;
+      }
+      promises.forEach(p => {
+        const canClaim = userPoints >= p.target && !p.claimed;
+        const el = document.createElement('div');
+        el.className = 'flex items-center justify-between p-4 border border-slate-100 bg-slate-50 rounded-2xl';
+        el.innerHTML = `
+          <div>
+            <h4 class="text-sm font-bold text-slate-900">${p.title}</h4>
+            <p class="text-xs text-slate-500">목표: ${p.target} P (현재 ${userPoints} P)</p>
+          </div>
+          <button onclick="claimPromise('${p.id}')" ${!canClaim ? 'disabled' : ''} class="px-4 py-2 text-xs font-bold rounded-xl ${p.claimed ? 'bg-slate-200 text-slate-400' : canClaim ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-400'}">
+            ${p.claimed ? '획득 완료' : '선물 받기'}
+          </button>
+        `;
+        container.appendChild(el);
+      });
+    }
+
+    function claimPromise(id) {
+      const p = promises.find(x => x.id === id);
+      if (p && userPoints >= p.target) {
+        p.claimed = true;
+        localStorage.setItem('sjj_promises_v30', JSON.stringify(promises));
+        showToast('🎉 축하합니다! 부모님께 약속된 선물을 요청해보세요!', 'success', '🎁');
+        renderPromises();
+      }
+    }
+
+    // Backup & Restore
+    function exportData() {
+      const data = { books, promises, reviews, userPoints, communityUsers, currentUser };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `sjj_books_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      showToast('데이터 백업 파일이 다운로드되었습니다.', 'success', '💾');
+    }
+
+    function importData(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const data = JSON.parse(event.target.result);
+          if (data.books) books = data.books;
+          if (data.promises) promises = data.promises;
+          if (data.reviews) reviews = data.reviews;
+          if (data.userPoints) userPoints = data.userPoints;
+          if (data.communityUsers) communityUsers = data.communityUsers;
+          if (data.currentUser) currentUser = data.currentUser;
+
+          localStorage.setItem('sjj_users_v32', JSON.stringify(communityUsers));
+          localStorage.setItem('sjj_current_user_v32', JSON.stringify(currentUser));
+          localStorage.setItem('sjj_promises_v30', JSON.stringify(promises));
+          localStorage.setItem('sjj_reviews_v30', JSON.stringify(reviews));
+
+          loadUserData();
+          showToast('데이터가 성공적으로 복원되었습니다!', 'success', '☁️');
+        } catch (err) {
+          showToast('올바르지 않은 백업 파일입니다.', 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function closeGamePlayground() {
+      document.getElementById('gamePlayground').classList.add('hidden');
+    }
+
+    // Game 1 ~ 9 ...
+    function startInitialQuiz() {
+      const playground = document.getElementById('gamePlayground');
+      const area = document.getElementById('gameArea');
+      document.getElementById('gameTitle').textContent = '🧩 책 제목 초성 퀴즈';
+      playground.classList.remove('hidden');
+
+      const quizList = [
+        { hint: "ㅇㄹㅇㅈ", answer: "어린왕자", full: "어린 왕자" },
+        { hint: "ㄱㄹㅃ", answer: "구름빵", full: "구름빵" },
+        { hint: "ㅇㅅㅌ", answer: "알사탕", full: "알사탕" },
+        { hint: "ㄱㅇㅈㄸ", answer: "강아지똥", full: "강아지 똥" },
+        { hint: "ㅅㄱㅈ", answer: "삼국지", full: "삼국지" },
+        { hint: "ㅁㄷㅇㄴㅇㅇㅌ", answer: "마당을나온암탉", full: "마당을 나온 암탉" }
+      ].sort(() => Math.random() - 0.5).slice(0, 3);
+
+      let step = 0;
+      let score = 0;
+
+      function renderStep() {
+        if (step >= quizList.length) {
+          area.innerHTML = `
+            <div class="text-center py-6">
+              <div class="text-4xl mb-2">🎉</div>
+              <h4 class="font-black text-lg text-slate-900 mb-1">초성 퀴즈 완료! (${score} / ${quizList.length} 정답)</h4>
+              <div class="flex justify-center gap-2 mt-4">
+                <button onclick="startInitialQuiz()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition-colors">다시 하기</button>
+                <button onclick="closeGamePlayground()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition-colors">닫기</button>
+              </div>
+            </div>`;
+          return;
+        }
+
+        const q = quizList[step];
+        area.innerHTML = `
+          <div class="max-w-md mx-auto text-center py-2">
+            <span class="text-xs text-amber-600 font-bold bg-amber-50 px-2.5 py-1 rounded-full">문제 ${step + 1} / ${quizList.length}</span>
+            <div class="my-6">
+              <p class="text-xs text-slate-400 mb-1">어떤 책 제목일까요?</p>
+              <h3 class="text-3xl font-black tracking-widest text-amber-900">${q.hint}</h3>
+            </div>
+            <div class="flex gap-2">
+              <input type="text" id="quizAnsInput" placeholder="책 제목을 띄어쓰기 없이 입력" class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-center font-bold text-sm outline-none">
+              <button onclick="checkInitialAnswer('${q.answer}', '${q.full}')" class="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition-colors">확인</button>
+            </div>
+          </div>`;
+        document.getElementById('quizAnsInput').focus();
+        document.getElementById('quizAnsInput').onkeypress = (e) => {
+          if (e.key === 'Enter') checkInitialAnswer(q.answer, q.full);
+        };
+      }
+
+      window.checkInitialAnswer = (ans, full) => {
+        const input = document.getElementById('quizAnsInput').value.replace(/\s+/g, '');
+        if (input === ans) {
+          showToast(`정답입니다! 👏 ('${full}')`, 'success');
+          score++;
+        } else {
+          showToast(`아쉽네요! 정답은 '${full}' 입니다.`, 'warning');
+        }
+        step++;
+        renderStep();
+      };
+
+      renderStep();
+    }
+
+    function startCardGame() {
+      const playground = document.getElementById('gamePlayground');
+      const area = document.getElementById('gameArea');
+      document.getElementById('gameTitle').textContent = '🃏 독서 카드 짝맞추기';
+      playground.classList.remove('hidden');
+
+      const symbols = ['📖', '📚', '🎓', '👑'];
+      const cards = [...symbols, ...symbols].sort(() => Math.random() - 0.5);
+      let flipped = [];
+      let matchedCount = 0;
+
+      area.innerHTML = `
+        <div class="max-w-md mx-auto">
+          <p class="text-xs text-center text-slate-500 mb-4">카드가 무작위로 섞였습니다! 뒤집힌 카드 짝을 찾으세요.</p>
+          <div class="grid grid-cols-4 gap-3" id="cardGrid">
+            ${cards.map((icon, i) => `
+              <button onclick="flipCard(${i}, '${icon}')" id="card-${i}" class="h-20 bg-emerald-600 text-white rounded-2xl font-black text-2xl flex items-center justify-center shadow-xs transition-transform active:scale-95">❓</button>
+            `).join('')}
+          </div>
+        </div>`;
+
+      window.flipCard = (idx, icon) => {
+        const btn = document.getElementById(`card-${idx}`);
+        if (btn.disabled || flipped.length === 2) return;
+        btn.textContent = icon;
+        btn.classList.remove('bg-emerald-600');
+        btn.classList.add('bg-emerald-100', 'text-slate-900');
+        flipped.push({ idx, icon, btn });
+
+        if (flipped.length === 2) {
+          if (flipped[0].icon === flipped[1].icon && flipped[0].idx !== flipped[1].idx) {
+            flipped[0].btn.disabled = true;
+            flipped[1].btn.disabled = true;
+            flipped = [];
+            matchedCount += 2;
+            if (matchedCount === cards.length) {
+              setTimeout(() => {
+                area.innerHTML = `
+                  <div class="text-center py-6">
+                    <div class="text-4xl mb-2">🎉</div>
+                    <h4 class="font-black text-lg text-emerald-950 mb-1">모든 카드 짝을 찾았습니다!</h4>
+                    <div class="flex justify-center gap-2 mt-4">
+                      <button onclick="startCardGame()" class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs">새 게임</button>
+                      <button onclick="closeGamePlayground()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+                    </div>
+                  </div>`;
+              }, 400);
+            }
+          } else {
+            setTimeout(() => {
+              flipped.forEach(c => {
+                c.btn.textContent = '❓';
+                c.btn.classList.remove('bg-emerald-100', 'text-slate-900');
+                c.btn.classList.add('bg-emerald-600', 'text-white');
+              });
+              flipped = [];
+            }, 800);
+          }
+        }
+      };
+    }
+
+    function startWordSearchGame() {
+      const playground = document.getElementById('gamePlayground');
+      const area = document.getElementById('gameArea');
+      document.getElementById('gameTitle').textContent = '🔍 독서 어휘 숨은그림찾기';
+      playground.classList.remove('hidden');
+
+      const grid = [
+        ['독', '서', '록', '지', '혜'],
+        ['마', '법', '책', '가', '울'],
+        ['장', '미', '여', '우', '림'],
+        ['바', '오', '밥', '꿈', '빵']
+      ];
+      const targets = ["독서록", "여우", "구름빵"];
+      let foundWords = [];
+      let currentSelection = "";
+
+      function renderBoard() {
+        area.innerHTML = `
+          <div class="max-w-md mx-auto text-center py-2">
+            <p class="text-xs text-slate-500 mb-2">찾아야 할 단어: <strong class="text-indigo-600 font-bold">${targets.map(t => foundWords.includes(t) ? `<s class="text-slate-400">${t}</s>` : t).join(', ')}</strong></p>
+            <div class="grid grid-cols-5 gap-2 my-4 max-w-xs mx-auto">
+              ${grid.map(row => row.map(char => `<button onclick="appendChar('${char}')" class="w-12 h-12 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 border border-indigo-100 rounded-xl font-black text-indigo-950 text-base flex items-center justify-center transition-colors">${char}</button>`).join('')).join('')}
+            </div>
+            <div class="bg-indigo-50 p-2.5 rounded-xl border border-indigo-100 text-xs font-bold text-indigo-900 mb-3">선택한 글자: <span id="wordBuffer" class="text-indigo-600 font-black">${currentSelection || '없음'}</span></div>
+            <div class="flex gap-2">
+              <button onclick="clearBuffer()" class="flex-1 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition-colors">지우기</button>
+              <button onclick="submitBuffer()" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors">정답 확인</button>
+            </div>
+          </div>`;
+      }
+
+      window.appendChar = (c) => {
+        currentSelection += c;
+        document.getElementById('wordBuffer').textContent = currentSelection;
+      };
+      window.clearBuffer = () => {
+        currentSelection = "";
+        document.getElementById('wordBuffer').textContent = "없음";
+      };
+      window.submitBuffer = () => {
+        if (targets.includes(currentSelection) && !foundWords.includes(currentSelection)) {
+          foundWords.push(currentSelection);
+          showToast(`🎉 정답! '${currentSelection}'을(를) 찾았습니다.`, 'success');
+          currentSelection = "";
+          if (foundWords.length === targets.length) {
+            area.innerHTML = `
+              <div class="text-center py-6">
+                <div class="text-4xl mb-2">🔍</div>
+                <h4 class="font-black text-lg text-indigo-950 mb-1">모든 단어를 찾았습니다!</h4>
+                <div class="flex justify-center gap-2 mt-4">
+                  <button onclick="startWordSearchGame()" class="px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl text-xs">새 게임</button>
+                  <button onclick="closeGamePlayground()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+                </div>
+              </div>`;
+            return;
+          }
+          renderBoard();
+        } else {
+          showToast('목표 단어가 아니거나 이미 찾은 단어입니다.', 'warning');
+          window.clearBuffer();
+        }
+      };
+
+      renderBoard();
+    }
+
+    function startTimerChallenge() {
+      const playground = document.getElementById('gamePlayground');
+      const area = document.getElementById('gameArea');
+      document.getElementById('gameTitle').textContent = '⏱️ 독서 타이머 챌린지';
+      playground.classList.remove('hidden');
+
+      const target = parseFloat((Math.random() * 2 + 3).toFixed(2));
+      let startTime = 0;
+      let timerInterval = null;
+      let running = false;
+
+      area.innerHTML = `
+        <div class="max-w-md mx-auto text-center py-4">
+          <p class="text-xs text-slate-500 mb-2">시작을 누르고, 정확히 <strong class="text-rose-600 font-bold text-sm">${target.toFixed(2)}초</strong>가 되었을 때 멈추세요!</p>
+          <div class="text-4xl font-black font-mono text-slate-900 my-6" id="challengeTimer">0.00 초</div>
+          <button id="challengeBtn" onclick="toggleChallengeTimer()" class="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-sm shadow-md transition-colors">챌린지 시작</button>
+        </div>`;
+
+      window.toggleChallengeTimer = () => {
+        const btn = document.getElementById('challengeBtn');
+        const display = document.getElementById('challengeTimer');
+
+        if (!running) {
+          running = true;
+          startTime = Date.now();
+          btn.textContent = `정확히 ${target.toFixed(2)}초 때 멈춤!`;
+          btn.className = "w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl text-sm shadow-md transition-colors";
+          timerInterval = setInterval(() => {
+            display.textContent = `${((Date.now() - startTime) / 1000).toFixed(2)} 초`;
+          }, 10);
+        } else {
+          running = false;
+          clearInterval(timerInterval);
+          const finalTime = parseFloat(((Date.now() - startTime) / 1000).toFixed(2));
+          const diff = Math.abs(finalTime - target);
+
+          if (diff <= 0.35) {
+            area.innerHTML = `
+              <div class="text-center py-6">
+                <div class="text-4xl mb-2">🎯</div>
+                <h4 class="font-black text-lg text-rose-950 mb-1">성공! 정확한 타이밍 감각입니다!</h4>
+                <p class="text-xs text-slate-500 mb-4">내 기록: ${finalTime}초 (목표: ${target.toFixed(2)}초, 오차: ${diff.toFixed(2)}초)</p>
+                <div class="flex justify-center gap-2">
+                  <button onclick="startTimerChallenge()" class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl text-xs">다시 도전</button>
+                  <button onclick="closeGamePlayground()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+                </div>
+              </div>`;
+          } else {
+            showToast(`기록: ${finalTime}초 (목표: ${target.toFixed(2)}초) 다시 도전해보세요!`, 'info');
+            startTimerChallenge();
+          }
+        }
+      };
+    }
+
+    function startVocabOxGame() {
+      const playground = document.getElementById('gamePlayground');
+      const area = document.getElementById('gameArea');
+      document.getElementById('gameTitle').textContent = '💡 어휘 O/X 퀴즈';
+      playground.classList.remove('hidden');
+
+      const oxPool = [
+        { q: "'여운'이란 감정이나 느낌이 오랫동안 가슴속에 남는 것을 뜻한다.", a: true },
+        { q: "'주인공'은 이야기 속에서 가장 아무런 비중도 없는 인물을 말한다.", a: false },
+        { q: "'통찰력'이란 사물의 본질이나 이치를 깊이 꿰뚫어 보는 능력을 말한다.", a: true },
+        { q: "'소행성'은 태양계의 행성보다 훨씬 더 거대한 행성을 의미한다.", a: false },
+        { q: "'갈등'이란 인물과 인물, 또는 인물과 환경 사이에서 일어나는 충돌이나 내적 고민을 뜻한다.", a: true },
+        { q: "'줄거리'는 책에서 가장 쓸데없는 문장만 모아놓은 것을 의미한다.", a: false }
+      ].sort(() => Math.random() - 0.5).slice(0, 3);
+
+      let step = 0;
+      let score = 0;
+
+      function renderOx() {
+        if (step >= oxPool.length) {
+          area.innerHTML = `
+            <div class="text-center py-6">
+              <div class="text-4xl mb-2">💡</div>
+              <h4 class="font-black text-lg text-cyan-950 mb-1">O/X 퀴즈 완료! (${score} / ${oxPool.length} 정답)</h4>
+              <div class="flex justify-center gap-2 mt-4">
+                <button onclick="startVocabOxGame()" class="px-4 py-2 bg-cyan-600 text-white font-bold rounded-xl text-xs">새 매치</button>
+                <button onclick="closeGamePlayground()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+              </div>
+            </div>`;
+          return;
+        }
+
+        const q = oxPool[step];
+        const isSwapped = Math.random() > 0.5;
+        const btnO = `<button onclick="answerOx(true, ${q.a})" class="flex-1 py-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black text-2xl rounded-2xl border border-emerald-200 transition-colors">⭕ O</button>`;
+        const btnX = `<button onclick="answerOx(false, ${q.a})" class="flex-1 py-4 bg-rose-50 hover:bg-rose-100 text-rose-700 font-black text-2xl rounded-2xl border border-rose-200 transition-colors">❌ X</button>`;
+
+        area.innerHTML = `
+          <div class="max-w-md mx-auto text-center py-2">
+            <span class="text-xs text-cyan-700 font-bold bg-cyan-50 px-2.5 py-1 rounded-full">문제 ${step + 1} / ${oxPool.length}</span>
+            <h3 class="text-base font-bold text-slate-900 my-6 leading-relaxed">"${q.q}"</h3>
+            <div class="flex gap-4">
+              ${isSwapped ? btnX + btnO : btnO + btnX}
+            </div>
+          </div>`;
+      }
+
+      window.answerOx = (userAns, realAns) => {
+        if (userAns === realAns) {
+          showToast('정답입니다! 👏', 'success');
+          score++;
+        } else {
+          showToast('오답입니다! 😅', 'error');
+        }
+        step++;
+        renderOx();
+      };
+
+      renderOx();
+    }
+
+    function startGenreMatchingGame() {
+      const playground = document.getElementById('gamePlayground');
+      const area = document.getElementById('gameArea');
+      document.getElementById('gameTitle').textContent = '📚 도서 장르 맞히기';
+      playground.classList.remove('hidden');
+
+      const rawList = [
+        { title: "어린 왕자", correct: "동화 / 명작소설", wrongs: ["요리 레시피북", "수학 문제집"] },
+        { title: "세종대왕 위인전", correct: "역사 / 위인전", wrongs: ["공상과학 만화", "백과사전"] },
+        { title: "정재승의 인간 탐구 보고서", correct: "과학 / 교양", wrongs: ["판타지 무협", "시집"] },
+        { title: "삼국지", correct: "역사 고전 대하소설", wrongs: ["단편 시집", "요리 교본"] },
+        { title: "알사탕", correct: "창작 그림책 / 판타지 동화", wrongs: ["전문 철학서", "천문학 학술지"] }
+      ].sort(() => Math.random() - 0.5).slice(0, 3);
+
+      const list = rawList.map(item => {
+        const allOpts = [item.correct, ...item.wrongs].sort(() => Math.random() - 0.5);
+        return {
+          title: item.title,
+          opts: allOpts,
+          a: allOpts.indexOf(item.correct)
+        };
+      });
+
+      let step = 0;
+      let score = 0;
+
+      function renderGenre() {
+        if (step >= list.length) {
+          area.innerHTML = `
+            <div class="text-center py-6">
+              <div class="text-4xl mb-2">📚</div>
+              <h4 class="font-black text-lg text-fuchsia-950 mb-1">장르 맞히기 완료! (${score} / ${list.length} 정답)</h4>
+              <div class="flex justify-center gap-2 mt-4">
+                <button onclick="startGenreMatchingGame()" class="px-4 py-2 bg-fuchsia-600 text-white font-bold rounded-xl text-xs">새 매치</button>
+                <button onclick="closeGamePlayground()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+              </div>
+            </div>`;
+          return;
+        }
+
+        const q = list[step];
+        area.innerHTML = `
+          <div class="max-w-md mx-auto text-center py-2">
+            <span class="text-xs text-fuchsia-700 font-bold bg-fuchsia-50 px-2.5 py-1 rounded-full">문제 ${step + 1} / ${list.length}</span>
+            <h3 class="text-lg font-extrabold text-slate-900 my-4">'${q.title}' 책의 알맞은 장르는?</h3>
+            <div class="space-y-2">
+              ${q.opts.map((opt, i) => `
+                <button onclick="answerGenre(${i === q.a})" class="w-full p-3.5 border border-slate-200 rounded-2xl text-sm font-bold text-left hover:bg-fuchsia-50 transition-colors flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-700 text-xs font-black flex items-center justify-center">${i + 1}</span>
+                  <span>${opt}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>`;
+      }
+
+      window.answerGenre = (isCorrect) => {
+        if (isCorrect) {
+          showToast('정답입니다! 👏', 'success');
+          score++;
+        } else {
+          showToast('오답입니다! 😅', 'error');
+        }
+        step++;
+        renderGenre();
+      };
+
+      renderGenre();
+    }
+
+    function startProverbGame() {
+      const playground = document.getElementById('gamePlayground');
+      const area = document.getElementById('gameArea');
+      document.getElementById('gameTitle').textContent = '✨ 속담 & 사자성어 퀴즈';
+      playground.classList.remove('hidden');
+
+      const rawList = [
+        { q: "'티끌 모아 (  )' - 작은 것이 모여 큰 것이 됨", correct: "태산", wrongs: ["바다", "하늘"] },
+        { q: "'가는 말이 고와야 (  ) 말이 곱다'", correct: "오는", wrongs: ["가는", "듣는"] },
+        { q: "'천 리 길도 (  )부터'", correct: "한 걸음", wrongs: ["달리기", "준비"] },
+        { q: "'우물 안 (  )' - 세상 물정을 모르는 좁은 시야", correct: "개구리", wrongs: ["올챙이", "물고기"] },
+        { q: "'낮말은 새가 듣고 밤말은 (  )가 듣는다'", correct: "쥐", wrongs: ["소", "부엉이"] }
+      ].sort(() => Math.random() - 0.5).slice(0, 3);
+
+      const list = rawList.map(item => {
+        const allOpts = [item.correct, ...item.wrongs].sort(() => Math.random() - 0.5);
+        return {
+          q: item.q,
+          opts: allOpts,
+          a: allOpts.indexOf(item.correct)
+        };
+      });
+
+      let step = 0;
+      let score = 0;
+
+      function renderProverb() {
+        if (step >= list.length) {
+          area.innerHTML = `
+            <div class="text-center py-6">
+              <div class="text-4xl mb-2">✨</div>
+              <h4 class="font-black text-lg text-amber-950 mb-1">속담 퀴즈 완료! (${score} / ${list.length} 정답)</h4>
+              <div class="flex justify-center gap-2 mt-4">
+                <button onclick="startProverbGame()" class="px-4 py-2 bg-yellow-600 text-white font-bold rounded-xl text-xs">다시 하기</button>
+                <button onclick="closeGamePlayground()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+              </div>
+            </div>`;
+          return;
+        }
+
+        const q = list[step];
+        area.innerHTML = `
+          <div class="max-w-md mx-auto text-center py-2">
+            <span class="text-xs text-amber-700 font-bold bg-amber-50 px-2.5 py-1 rounded-full">문제 ${step + 1} / ${list.length}</span>
+            <h3 class="text-base font-extrabold text-slate-900 my-4">${q.q}</h3>
+            <div class="space-y-2">
+              ${q.opts.map((opt, i) => `
+                <button onclick="answerProverb(${i === q.a})" class="w-full p-3.5 border border-slate-200 rounded-2xl text-sm font-bold text-left hover:bg-yellow-50 transition-colors flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-700 text-xs font-black flex items-center justify-center">${i + 1}</span>
+                  <span>${opt}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>`;
+      }
+
+      window.answerProverb = (isCorrect) => {
+        if (isCorrect) {
+          showToast('정답입니다! 👏', 'success');
+          score++;
+        } else {
+          showToast('오답입니다! 😅', 'error');
+        }
+        step++;
+        renderProverb();
+      };
+
+      renderProverb();
+    }
+
+    function startHeroGame() {
+      const playground = document.getElementById('gamePlayground');
+      const area = document.getElementById('gameArea');
+      document.getElementById('gameTitle').textContent = '👑 책 속 주인공 맞히기';
+      playground.classList.remove('hidden');
+
+      const rawList = [
+        { q: "소행성 B612에서 지구로 찾아와 장미꽃과의 사랑을 기억하며 여우와 대화한 주인공은?", correct: "어린 왕자", wrongs: ["피터 팬", "피노키오"] },
+        { q: "비 오는 날 구름으로 만든 빵을 먹고 하늘로 날아올라 아빠에게 빵을 전해준 고양이 남매는?", correct: "홍비와 홍시", wrongs: ["콩쥐와 팥쥐", "흥부와 놀부"] },
+        { q: "신비한 알사탕을 먹고 아빠와 강아지 구슬이의 속마음을 듣게 된 소년은?", correct: "동동이", wrongs: ["철수", "길동이"] },
+        { q: "양계장을 탈출해 야생에서 청둥오리 '초록머리'를 지극정성으로 키워낸 위대한 암탉은?", correct: "잎싹", wrongs: ["꼬꼬마", "흰둥이"] },
+        { q: "민들레꽃을 피우기 위해 기꺼이 자신의 온몸을 거름으로 내어준 세상에서 가장 아름다운 존재는?", correct: "강아지 똥", wrongs: ["흙덩이", "참새"] }
+      ].sort(() => Math.random() - 0.5).slice(0, 3);
+
+      const list = rawList.map(item => {
+        const allOpts = [item.correct, ...item.wrongs].sort(() => Math.random() - 0.5);
+        return {
+          q: item.q,
+          opts: allOpts,
+          a: allOpts.indexOf(item.correct)
+        };
+      });
+
+      let step = 0;
+      let score = 0;
+
+      function renderHero() {
+        if (step >= list.length) {
+          area.innerHTML = `
+            <div class="text-center py-6">
+              <div class="text-4xl mb-2">👑</div>
+              <h4 class="font-black text-lg text-violet-950 mb-1">주인공 맞히기 완료! (${score} / ${list.length} 정답)</h4>
+              <div class="flex justify-center gap-2 mt-4">
+                <button onclick="startHeroGame()" class="px-4 py-2 bg-violet-600 text-white font-bold rounded-xl text-xs">다시 하기</button>
+                <button onclick="closeGamePlayground()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+              </div>
+            </div>`;
+          return;
+        }
+
+        const q = list[step];
+        area.innerHTML = `
+          <div class="max-w-md mx-auto text-center py-2">
+            <span class="text-xs text-violet-700 font-bold bg-violet-50 px-2.5 py-1 rounded-full">문제 ${step + 1} / ${list.length}</span>
+            <h3 class="text-sm font-extrabold text-slate-900 my-4 leading-relaxed">${q.q}</h3>
+            <div class="space-y-2">
+              ${q.opts.map((opt, i) => `
+                <button onclick="answerHero(${i === q.a})" class="w-full p-3.5 border border-slate-200 rounded-2xl text-sm font-bold text-left hover:bg-violet-50 transition-colors flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-700 text-xs font-black flex items-center justify-center">${i + 1}</span>
+                  <span>${opt}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>`;
+      }
+
+      window.answerHero = (isCorrect) => {
+        if (isCorrect) {
+          showToast('정답입니다! 👏', 'success');
+          score++;
+        } else {
+          showToast('오답입니다! 😅', 'error');
+        }
+        step++;
+        renderHero();
+      };
+
+      renderHero();
+    }
+
+    function startFillBlankGame() {
+      const playground = document.getElementById('gamePlayground');
+      const area = document.getElementById('gameArea');
+      document.getElementById('gameTitle').textContent = '📖 문장 빈칸 채우기';
+      playground.classList.remove('hidden');
+
+      const rawList = [
+        { q: "책을 읽으면 생각이 깊어지고 새로운 (  )을(를) 얻을 수 있다.", correct: "지혜", wrongs: ["장난감", "피로"] },
+        { q: "가장 중요한 것은 눈에 보이지 않고 (  )(으)로 보아야 해.", correct: "마음", wrongs: ["안경", "현미경"] },
+        { q: "독서록을 꾸준히 쓰면 자신의 생각을 조리 있게 표현하는 (  )이(가) 길러진다.", correct: "어휘력과 문장력", wrongs: ["체력과 근력", "시력"] },
+        { q: "친구의 아픔을 함께 느끼고 감싸주는 마음을 (  )(이)라고 한다.", correct: "공감", wrongs: ["질투", "무관심"] }
+      ].sort(() => Math.random() - 0.5).slice(0, 3);
+
+      const list = rawList.map(item => {
+        const allOpts = [item.correct, ...item.wrongs].sort(() => Math.random() - 0.5);
+        return {
+          q: item.q,
+          opts: allOpts,
+          a: allOpts.indexOf(item.correct)
+        };
+      });
+
+      let step = 0;
+      let score = 0;
+
+      function renderBlank() {
+        if (step >= list.length) {
+          area.innerHTML = `
+            <div class="text-center py-6">
+              <div class="text-4xl mb-2">📖</div>
+              <h4 class="font-black text-lg text-teal-950 mb-1">문장 채우기 완료! (${score} / ${list.length} 정답)</h4>
+              <div class="flex justify-center gap-2 mt-4">
+                <button onclick="startFillBlankGame()" class="px-4 py-2 bg-teal-600 text-white font-bold rounded-xl text-xs">다시 하기</button>
+                <button onclick="closeGamePlayground()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+              </div>
+            </div>`;
+          return;
+        }
+
+        const q = list[step];
+        area.innerHTML = `
+          <div class="max-w-md mx-auto text-center py-2">
+            <span class="text-xs text-teal-700 font-bold bg-teal-50 px-2.5 py-1 rounded-full">문제 ${step + 1} / ${list.length}</span>
+            <h3 class="text-base font-extrabold text-slate-900 my-4">"${q.q}"</h3>
+            <div class="space-y-2">
+              ${q.opts.map((opt, i) => `
+                <button onclick="answerBlank(${i === q.a})" class="w-full p-3.5 border border-slate-200 rounded-2xl text-sm font-bold text-left hover:bg-teal-50 transition-colors flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-700 text-xs font-black flex items-center justify-center">${i + 1}</span>
+                  <span>${opt}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>`;
+      }
+
+      window.answerBlank = (isCorrect) => {
+        if (isCorrect) {
+          showToast('정답입니다! 👏', 'success');
+          score++;
+        } else {
+          showToast('오답입니다! 😅', 'error');
+        }
+        step++;
+        renderBlank();
+      };
+
+      renderBlank();
+    }
+
+    // Run on startup
+    window.onload = function() {
+      initStatsYear();
+      init();
+    };
+  </script>
+</body>
+</html>
